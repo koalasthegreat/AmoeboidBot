@@ -112,7 +112,7 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if "[" in message.content:
+    if "[" in message.content and not message.author.bot:
         count = 0
 
         regex = r"\[(.*?)\]"
