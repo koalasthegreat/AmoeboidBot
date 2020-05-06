@@ -97,7 +97,7 @@ def format_embed(card):
         if card.get('scryfall_uri') is not None:
             if embed.description != "":
                 embed.description += "\n\n [View on Scryfall](" + card['scryfall_uri'] + ")" 
-        if card.get('mana_cost') is not None:
+        if card.get('mana_cost') is not None and card.get('mana_cost') != "":
             embed.add_field(name="Cost:", value=get_cost_string(card['mana_cost']))
         if card.get('type_line') is not None:
             embed.add_field(name="Type:", value=card['type_line'])
