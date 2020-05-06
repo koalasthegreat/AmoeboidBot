@@ -18,7 +18,7 @@ bot = commands.Bot(command_prefix = PREFIX)
 
 
 # queries scryfall for a card, returning the result
-def getCard(name):
+def get_card(name):
     payload = {"fuzzy": name}
 
     r = requests.get('https://api.scryfall.com/cards/named', params=payload)
@@ -28,7 +28,7 @@ def getCard(name):
     return parsed
 
 # formats and returns the cost string for a card
-def getCostString(cost):
+def get_cost_string(cost):
     formatted_string = ""
     arr = cost.split("{")
 
@@ -56,7 +56,7 @@ def getCostString(cost):
     return formatted_string
 
 # gets color from a color identity string
-def getColorIdentity(color):
+def get_color_identity(color):
     if len(color) == 0:
         return discord.Color.from_rgb(100,101,102)
 
@@ -76,7 +76,7 @@ def getColorIdentity(color):
         return discord.Color.from_rgb(207,181,59)
 
 # formats the embed for a card
-def formatEmbed(card):
+def format_embed(card):
     embed = discord.Embed(type="rich")
     if card.get('name') is None:
         print("ERROR: Card not found")
@@ -84,7 +84,7 @@ def formatEmbed(card):
     else:
         embed.title = card['name']
         if card.get('color_identity') is not None:
-            embed.colour = getColorIdentity(card['color_identity'])
+            embed.colour = get_color_identity(card['color_identity'])
         if card.get('image_uris').get('normal') is not None:
             embed.set_image(url=card['image_uris']['normal'])
         if card.get('oracle_text') is not None:
@@ -98,7 +98,7 @@ def formatEmbed(card):
             if embed.description != "":
                 embed.description += "\n\n [View on Scryfall](" + card['scryfall_uri'] + ")" 
         if card.get('mana_cost') is not None:
-            embed.add_field(name="Cost:", value=getCostString(card['mana_cost']))
+            embed.add_field(name="Cost:", value=get_cost_string(card['mana_cost']))
         if card.get('type_line') is not None:
             embed.add_field(name="Type:", value=card['type_line'])
         if card.get('power') is not None and card.get('toughness') is not None:
@@ -122,7 +122,7 @@ async def on_message(message):
         cards = []
 
         for name in card_names:
-            card = getCard(name)
+            card = get_card(name)
             cards.append(card)
             sleep(0.200)
 
@@ -132,7 +132,7 @@ async def on_message(message):
                 break
 
             count += 1
-            embed = formatEmbed(card)
+            embed = format_embed(card)
             await message.channel.send(embed=embed)
             await asyncio.sleep(1)
 
