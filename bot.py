@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from time import sleep
 import os
 import json
 import requests
@@ -118,17 +119,21 @@ async def on_message(message):
         regex = r"\[(.*?)\]"
         card_names = re.findall(regex, message.content)
 
+        cards = []
+
         for name in card_names:
+            card = getCard(name)
+            cards.append(card)
+            sleep(0.200)
+
+        for card in cards:
             if count >= 5:
                 await message.channel.send("To prevent spam, only 5 cards can be processed at one time. Please make another query.")
                 break
 
             count += 1
-            card = getCard(name)
             embed = formatEmbed(card)
-
             await message.channel.send(embed=embed)
-
             await asyncio.sleep(1)
 
 
