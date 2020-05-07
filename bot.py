@@ -80,18 +80,11 @@ class MagicCard(BaseModel):
         embed = discord.Embed(type="rich")
         embed.title = card.name
 
-        if card.loyalty is not None:
-            embed.add_field(name="Loyalty:", value=card.loyalty)
-
-        if card.power is not None:
-            embed.add_field(name="Stats:", value=f"{card.power}/{card.toughness}")
-
-        if card.type_line is not None:
-            embed.add_field(name="Type:", value=card.type_line)
+        prefix = ""
 
         embed.description = ""
+        embed.description += card.oracle_text
 
-        prefix = ""
         if embed.description != "":
             prefix = "\n\n"
         embed.description += f"{prefix}*{card.flavor_text}*"
@@ -99,18 +92,28 @@ class MagicCard(BaseModel):
         if embed.description != "":
             embed.description += f"\n\n[View on Scryfall]({card.scryfall_uri})"
 
+        r, g, b = card.color_identity
+        embed.colour = discord.Color.from_rgb(r, g, b)
+
         if card.mana_cost is not None and card.mana_cost != "":
             embed.add_field(
                 name="Cost:", value=MagicCard.get_cost_string(card.mana_cost)
             )
 
-        embed.description += card.oracle_text
+        if card.type_line is not None:
+            embed.add_field(name="Type:", value=card.type_line)
+
+        if card.loyalty is not None:
+            embed.add_field(name="Loyalty:", value=card.loyalty)
+
+        if card.power is not None:
+            embed.add_field(name="Stats:", value=f"{card.power}/{card.toughness}")
+
+
         embed.set_image(url=card.normal_image)
 
-        r, g, b = card.color_identity
-        embed.colour = discord.Color.from_rgb(r, g, b)
 
-        embed.title = card.name
+
         return embed
 
 
