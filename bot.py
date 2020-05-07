@@ -10,22 +10,23 @@ from dotenv import load_dotenv
 
 # load .env
 load_dotenv()
-TOKEN = os.getenv('TOKEN')
-PREFIX = os.getenv('PREFIX', default='a!')
+TOKEN = os.getenv("TOKEN")
+PREFIX = os.getenv("PREFIX", default="a!")
 
 # init bot
-bot = commands.Bot(command_prefix = PREFIX)
+bot = commands.Bot(command_prefix=PREFIX)
 
 
 # queries scryfall for a card, returning the result
 def get_card(name):
     payload = {"fuzzy": name}
 
-    r = requests.get('https://api.scryfall.com/cards/named', params=payload)
-    
+    r = requests.get("https://api.scryfall.com/cards/named", params=payload)
+
     parsed = json.loads(r.content)
 
     return parsed
+
 
 # formats and returns the cost string for a card
 def get_cost_string(cost):
@@ -35,11 +36,10 @@ def get_cost_string(cost):
     for char in arr:
         if len(char) != 0:
             c = char[0]
-            
+
             try:
                 int(c)
                 formatted_string += "**(" + c + ")**"
-                
 
             except ValueError:
                 if c == "R":
@@ -55,61 +55,69 @@ def get_cost_string(cost):
 
     return formatted_string
 
+
 # gets color from a color identity string
 def get_color_identity(color):
     if len(color) == 0:
-        return discord.Color.from_rgb(100,101,102)
+        return discord.Color.from_rgb(100, 101, 102)
 
     if len(color) == 1:
         color = color[0]
         if color == "R":
-            return discord.Color.from_rgb(221,46,68)
+            return discord.Color.from_rgb(221, 46, 68)
         elif color == "U":
-            return discord.Color.from_rgb(85,172,238)
+            return discord.Color.from_rgb(85, 172, 238)
         elif color == "G":
-            return discord.Color.from_rgb(120,177,89)
+            return discord.Color.from_rgb(120, 177, 89)
         elif color == "B":
-            return discord.Color.from_rgb(49,55,61)
+            return discord.Color.from_rgb(49, 55, 61)
         elif color == "W":
-            return discord.Color.from_rgb(230,231,232)
+            return discord.Color.from_rgb(230, 231, 232)
     else:
-        return discord.Color.from_rgb(207,181,59)
+        return discord.Color.from_rgb(207, 181, 59)
+
 
 # formats the embed for a card
 def format_embed(card):
     embed = discord.Embed(type="rich")
-    if card.get('name') is None:
+    if card.get("name") is None:
         print("ERROR: Card not found")
         return None
     else:
-        embed.title = card['name']
-        if card.get('color_identity') is not None:
-            embed.colour = get_color_identity(card['color_identity'])
-        if card.get('image_uris').get('normal') is not None:
-            embed.set_image(url=card['image_uris']['normal'])
-        if card.get('oracle_text') is not None:
-            embed.description = card['oracle_text']
-        if card.get('flavor_text') is not None:
+        embed.title = card["name"]
+        if card.get("color_identity") is not None:
+            embed.colour = get_color_identity(card["color_identity"])
+        if card.get("image_uris").get("normal") is not None:
+            embed.set_image(url=card["image_uris"]["normal"])
+        if card.get("oracle_text") is not None:
+            embed.description = card["oracle_text"]
+        if card.get("flavor_text") is not None:
             if embed.description != "":
-                embed.description += "\n\n*" + card['flavor_text'] + "*"
+                embed.description += "\n\n*" + card["flavor_text"] + "*"
             else:
-                embed.description = "*" + card['flavor_text'] + "*"
-        if card.get('scryfall_uri') is not None:
+                embed.description = "*" + card["flavor_text"] + "*"
+        if card.get("scryfall_uri") is not None:
             if embed.description != "":
-                embed.description += "\n\n [View on Scryfall](" + card['scryfall_uri'] + ")" 
-        if card.get('mana_cost') is not None and card.get('mana_cost') != "":
-            embed.add_field(name="Cost:", value=get_cost_string(card['mana_cost']))
-        if card.get('type_line') is not None:
-            embed.add_field(name="Type:", value=card['type_line'])
-        if card.get('power') is not None and card.get('toughness') is not None:
-            embed.add_field(name="Stats:", value=card['power'] + "/" + card['toughness'])
-        if card.get('loyalty') is not None:
-            embed.add_field(name="Loyalty:", value=card['loyalty'])
+                embed.description += (
+                    "\n\n [View on Scryfall](" + card["scryfall_uri"] + ")"
+                )
+        if card.get("mana_cost") is not None and card.get("mana_cost") != "":
+            embed.add_field(name="Cost:", value=get_cost_string(card["mana_cost"]))
+        if card.get("type_line") is not None:
+            embed.add_field(name="Type:", value=card["type_line"])
+        if card.get("power") is not None and card.get("toughness") is not None:
+            embed.add_field(
+                name="Stats:", value=card["power"] + "/" + card["toughness"]
+            )
+        if card.get("loyalty") is not None:
+            embed.add_field(name="Loyalty:", value=card["loyalty"])
         return embed
+
 
 @bot.event
 async def on_ready():
     print("Bot is online")
+
 
 @bot.event
 async def on_message(message):
@@ -128,7 +136,9 @@ async def on_message(message):
 
         for card in cards:
             if count >= 5:
-                await message.channel.send("To prevent spam, only 5 cards can be processed at one time. Please make another query.")
+                await message.channel.send(
+                    "To prevent spam, only 5 cards can be processed at one time. Please make another query."
+                )
                 break
 
             count += 1
