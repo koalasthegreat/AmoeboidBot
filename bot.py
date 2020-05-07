@@ -1,12 +1,15 @@
-import discord
-from discord.ext import commands
 from time import sleep
 import os
 import json
-import requests
 import asyncio
 import re
+from typing import Tuple, Optional, List, Any
+
+import requests
+import discord
+from discord.ext import commands
 from dotenv import load_dotenv
+from pydantic import BaseModel, validator
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -15,97 +18,118 @@ PREFIX = os.getenv("PREFIX", default="a!")
 bot = commands.Bot(command_prefix=PREFIX)
 
 
-def get_card(name):
-    payload = {"fuzzy": name}
+class MagicCard(BaseModel):
+    name: str
+    color_identity: Optional[Tuple[Any, ...]]
+    normal_image: Optional[str]
+    oracle_text: Optional[str]
+    flavor_text: Optional[str]
+    scryfall_uri: Optional[str]
+    mana_cost: Optional[str]
+    type_line: Optional[str]
+    power: Optional[str]
+    toughness: Optional[str]
+    loyalty: Optional[str]
 
-    r = requests.get("https://api.scryfall.com/cards/named", params=payload)
+    def get_cost_string(cost):
+        formatted_string = ""
+        arr = cost.split("{")
 
-    parsed = json.loads(r.content)
+        c_map = {
+            "R": "🔴",
+            "U": "🔵",
+            "G": "🟢",
+            "B": "⚫",
+            "W": "⚪",
+        }
 
-    return parsed
+        for char in arr:
+            if len(char) != 0:
+                c = char[0]
 
-
-def get_cost_string(cost):
-    formatted_string = ""
-    arr = cost.split("{")
-
-    for char in arr:
-        if len(char) != 0:
-            c = char[0]
-
-            try:
-                int(c)
-                formatted_string += "**(" + c + ")**"
-
-            except ValueError:
-                if c == "R":
-                    formatted_string += "🔴"
-                elif c == "U":
-                    formatted_string += "🔵"
-                elif c == "G":
-                    formatted_string += "🟢"
-                elif c == "B":
-                    formatted_string += "⚫"
+                if c in c_map:
+                    formatted_string += c_map[c]
                 else:
-                    formatted_string += "⚪"
+                    int(c)
+                    formatted_string += f"**({c})**"
 
-    return formatted_string
+        return formatted_string
 
+    def get_color_identity(color):
+        color_map = {
+            "R": (221, 46, 68),
+            "U": (85, 172, 238),
+            "G": (120, 177, 89),
+            "B": (49, 55, 61),
+            "W": (230, 231, 232),
+        }
 
-def get_color_identity(color):
-    if len(color) == 0:
-        return discord.Color.from_rgb(100, 101, 102)
+        if len(color) == 0:
+            return (100, 101, 102)
 
-    if len(color) == 1:
-        color = color[0]
-        if color == "R":
-            return discord.Color.from_rgb(221, 46, 68)
-        elif color == "U":
-            return discord.Color.from_rgb(85, 172, 238)
-        elif color == "G":
-            return discord.Color.from_rgb(120, 177, 89)
-        elif color == "B":
-            return discord.Color.from_rgb(49, 55, 61)
-        elif color == "W":
-            return discord.Color.from_rgb(230, 231, 232)
-    else:
-        return discord.Color.from_rgb(207, 181, 59)
+        if len(color) == 1:
+            color = color[0]
+            if color in color_map:
+                return color_map[color]
 
+        else:
+            return (207, 181, 59)
 
-def format_embed(card):
-    embed = discord.Embed(type="rich")
-    if card.get("name") is None:
-        print("ERROR: Card not found")
-        return None
-    else:
-        embed.title = card["name"]
-        if card.get("color_identity") is not None:
-            embed.colour = get_color_identity(card["color_identity"])
-        if card.get("image_uris").get("normal") is not None:
-            embed.set_image(url=card["image_uris"]["normal"])
-        if card.get("oracle_text") is not None:
-            embed.description = card["oracle_text"]
-        if card.get("flavor_text") is not None:
-            if embed.description != "":
-                embed.description += "\n\n*" + card["flavor_text"] + "*"
-            else:
-                embed.description = "*" + card["flavor_text"] + "*"
-        if card.get("scryfall_uri") is not None:
-            if embed.description != "":
-                embed.description += (
-                    "\n\n [View on Scryfall](" + card["scryfall_uri"] + ")"
-                )
-        if card.get("mana_cost") is not None and card.get("mana_cost") != "":
-            embed.add_field(name="Cost:", value=get_cost_string(card["mana_cost"]))
-        if card.get("type_line") is not None:
-            embed.add_field(name="Type:", value=card["type_line"])
-        if card.get("power") is not None and card.get("toughness") is not None:
+    def generate_embed(card):
+        embed = discord.Embed(type="rich")
+        embed.title = card.name
+
+        if card.loyalty is not None:
+            embed.add_field(name="Loyalty:", value=card.loyalty)
+
+        if card.power is not None:
+            embed.add_field(name="Stats:", value=f"{card.power}/{card.toughness}")
+
+        if card.type_line is not None:
+            embed.add_field(name="Type:", value=card.type_line)
+
+        embed.description = ""
+
+        prefix = ""
+        if embed.description != "":
+            prefix = "\n\n"
+        embed.description += f"{prefix}*{card.flavor_text}*"
+
+        if embed.description != "":
+            embed.description += f"\n\n[View on Scryfall]({card.scryfall_uri})"
+
+        if card.mana_cost is not None and card.mana_cost != "":
             embed.add_field(
-                name="Stats:", value=card["power"] + "/" + card["toughness"]
+                name="Cost:", value=MagicCard.get_cost_string(card.mana_cost)
             )
-        if card.get("loyalty") is not None:
-            embed.add_field(name="Loyalty:", value=card["loyalty"])
+
+        embed.description += card.oracle_text
+        embed.set_image(url=card.normal_image)
+
+        r, g, b = card.color_identity
+        embed.colour = discord.Color.from_rgb(r, g, b)
+
+        embed.title = card.name
         return embed
+
+
+class ScryfallAPI:
+    def __init__(self):
+        self.cache = (
+            {}
+        )  # TODO make cache sqlite instead of python world so it maintains between starts / no eat ram
+        self.base_uri = "https://api.scryfall.com"
+
+    def get_card(self, name):
+        if name in self.cache:
+            return self.cache[name]
+        else:
+            payload = {"fuzzy": name}
+            r = requests.get(f"{self.base_uri}/cards/named", params=payload)
+            sleep(0.25)  # todo better rate limiting
+            json = r.json()
+            self.cache[name] = json
+            return json
 
 
 @bot.event
@@ -113,32 +137,46 @@ async def on_ready():
     print("Bot is online")
 
 
+scryfall_api = ScryfallAPI()
+
+
 @bot.event
 async def on_message(message):
-    if "[" in message.content and not message.author.bot:
-        count = 0
+    if "[" not in message.content and message.author.bot:
+        return
 
-        regex = r"\[(.*?)\]"
-        card_names = re.findall(regex, message.content)
+    count = 0
 
-        cards = []
+    square_bracket_regex = r"\[(.*?)\]"
+    card_names = re.findall(square_bracket_regex, message.content)
+    cards = []
 
-        for name in card_names:
-            card = get_card(name)
-            cards.append(card)
-            sleep(0.200)
+    for name in card_names:
+        raw_card = scryfall_api.get_card(name)
 
-        for card in cards:
-            if count >= 5:
-                await message.channel.send(
-                    "To prevent spam, only 5 cards can be processed at one time. Please make another query."
-                )
-                break
+        color_identity = MagicCard.get_color_identity(raw_card["color_identity"])
+        normal_image = raw_card["image_uris"]["normal"]
 
-            count += 1
-            embed = format_embed(card)
-            await message.channel.send(embed=embed)
-            await asyncio.sleep(1)
+        splat = {
+            **raw_card,
+            **{"color_identity": color_identity, "normal_image": normal_image},
+        }
+        card = MagicCard(**splat)
+
+        cards.append(card)
+
+    for card in cards:
+        if count >= 5:
+            await message.channel.send(
+                "To prevent spam, only 5 cards can be processed at one time. Please make another query."
+            )
+            return
+
+        count += 1
+        embed = MagicCard.generate_embed(card)
+        print(embed)
+        await message.channel.send(embed=embed)
+        await asyncio.sleep(1)
 
 
 bot.run(TOKEN)
