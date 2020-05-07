@@ -8,16 +8,13 @@ import asyncio
 import re
 from dotenv import load_dotenv
 
-# load .env
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 PREFIX = os.getenv("PREFIX", default="a!")
 
-# init bot
 bot = commands.Bot(command_prefix=PREFIX)
 
 
-# queries scryfall for a card, returning the result
 def get_card(name):
     payload = {"fuzzy": name}
 
@@ -28,7 +25,6 @@ def get_card(name):
     return parsed
 
 
-# formats and returns the cost string for a card
 def get_cost_string(cost):
     formatted_string = ""
     arr = cost.split("{")
@@ -56,7 +52,6 @@ def get_cost_string(cost):
     return formatted_string
 
 
-# gets color from a color identity string
 def get_color_identity(color):
     if len(color) == 0:
         return discord.Color.from_rgb(100, 101, 102)
@@ -77,7 +72,6 @@ def get_color_identity(color):
         return discord.Color.from_rgb(207, 181, 59)
 
 
-# formats the embed for a card
 def format_embed(card):
     embed = discord.Embed(type="rich")
     if card.get("name") is None:
