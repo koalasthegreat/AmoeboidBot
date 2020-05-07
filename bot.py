@@ -3,7 +3,7 @@ import os
 import json
 import asyncio
 import re
-from typing import Tuple, Optional, List, Any
+from typing import Tuple, Optional, List, Dict, Any
 
 import requests
 import discord
@@ -30,19 +30,13 @@ class MagicCard(BaseModel):
     power: Optional[str]
     toughness: Optional[str]
     loyalty: Optional[str]
+    prices: Optional[Dict[str, Any]]
 
-    def get_cost_string(cost):
+    def format_color_string(cost):
         formatted_string = "**"
         arr = cost.split("{")
 
-        c_map = {
-            "R": "🔴",
-            "U": "🔵",
-            "G": "🟢",
-            "B": "⚫",
-            "W": "⚪",
-            "C": "⟡"
-        }
+        c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "⚫", "W": "⚪", "C": "⟡"}
 
         for char in arr:
             if len(char) != 0:
@@ -55,7 +49,7 @@ class MagicCard(BaseModel):
 
         return formatted_string + "**"
 
-    def get_color_identity(color):
+    def format_color_identity(color):
         color_map = {
             "R": (221, 46, 68),
             "U": (85, 172, 238),
@@ -75,6 +69,22 @@ class MagicCard(BaseModel):
 
         else:
             return (207, 181, 59)
+
+    def format_prices(prices):
+        price_string = ""
+        usd = prices.get("usd")
+        usd_foil = prices.get("usd_foil")
+
+        if usd:
+            price_string += "Normal: " + (prices.get("usd") or "N/A") + " USD\n"
+        else:
+            price_string += "Normal: N/A\n"
+        if usd_foil:
+            price_string += "Foil: " + (prices.get("usd_foil") or "N/A") + " USD"
+        else:
+            price_string += "Foil: N/A"
+
+        return price_string
 
     def generate_embed(card):
         embed = discord.Embed(type="rich")
@@ -97,7 +107,7 @@ class MagicCard(BaseModel):
 
         if card.mana_cost is not None and card.mana_cost != "":
             embed.add_field(
-                name="Cost:", value=MagicCard.get_cost_string(card.mana_cost)
+                name="Cost:", value=MagicCard.format_color_string(card.mana_cost)
             )
 
         if card.type_line is not None:
@@ -109,10 +119,11 @@ class MagicCard(BaseModel):
         if card.power is not None:
             embed.add_field(name="Stats:", value=f"{card.power}/{card.toughness}")
 
+        if card.prices is not None:
+            price_string = MagicCard.format_prices(card.prices)
+            embed.add_field(name="Prices:", value=price_string)
 
         embed.set_image(url=card.normal_image)
-
-
 
         return embed
 
@@ -158,12 +169,17 @@ async def on_message(message):
     for name in card_names:
         raw_card = scryfall_api.get_card(name)
 
-        color_identity = MagicCard.get_color_identity(raw_card["color_identity"])
+        color_identity = MagicCard.format_color_identity(raw_card["color_identity"])
         normal_image = raw_card["image_uris"]["normal"]
+        prices = raw_card["prices"]
 
         splat = {
             **raw_card,
-            **{"color_identity": color_identity, "normal_image": normal_image},
+            **{
+                "color_identity": color_identity,
+                "normal_image": normal_image,
+                "prices": prices,
+            },
         }
         card = MagicCard(**splat)
 
