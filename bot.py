@@ -20,11 +20,11 @@ bot = commands.Bot(command_prefix=PREFIX)
 
 class MagicCard(BaseModel):
     name: str
-    color_identity: Optional[Tuple[Any, ...]]
-    normal_image: Optional[str]
+    color_identity: Tuple[Any, ...]
+    normal_image: str
     oracle_text: Optional[str]
     flavor_text: Optional[str]
-    scryfall_uri: Optional[str]
+    scryfall_uri: str
     mana_cost: Optional[str]
     type_line: Optional[str]
     power: Optional[str]
@@ -32,7 +32,7 @@ class MagicCard(BaseModel):
     loyalty: Optional[str]
 
     def get_cost_string(cost):
-        formatted_string = ""
+        formatted_string = "**"
         arr = cost.split("{")
 
         c_map = {
@@ -41,6 +41,7 @@ class MagicCard(BaseModel):
             "G": "🟢",
             "B": "⚫",
             "W": "⚪",
+            "C": "⟡"
         }
 
         for char in arr:
@@ -50,10 +51,9 @@ class MagicCard(BaseModel):
                 if c in c_map:
                     formatted_string += c_map[c]
                 else:
-                    int(c)
-                    formatted_string += f"**({c})**"
+                    formatted_string += f"({c})"
 
-        return formatted_string
+        return formatted_string + "**"
 
     def get_color_identity(color):
         color_map = {
@@ -62,6 +62,7 @@ class MagicCard(BaseModel):
             "G": (120, 177, 89),
             "B": (49, 55, 61),
             "W": (230, 231, 232),
+            "C": (100, 101, 102),
         }
 
         if len(color) == 0:
@@ -174,7 +175,6 @@ async def on_message(message):
 
         count += 1
         embed = MagicCard.generate_embed(card)
-        print(embed)
         await message.channel.send(embed=embed)
         await asyncio.sleep(1)
 
