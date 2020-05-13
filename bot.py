@@ -33,19 +33,17 @@ class MagicCard(BaseModel):
     prices: Optional[Dict[str, Any]]
 
     def format_color_string(cost):
-        formatted_string = "**"
-        arr = cost.split("{")
-
         c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "⚫", "W": "⚪", "C": "⟡"}
+        curly_brace_regex = r"\{(.*?)\}"
 
-        for char in arr:
-            if len(char) != 0:
-                c = char[0]
+        formatted_string = "**"
+        arr = re.findall(curly_brace_regex, cost)
 
-                if c in c_map:
-                    formatted_string += c_map[c]
-                else:
-                    formatted_string += f"({c})"
+        for cost_symbol in arr:
+            if cost_symbol in c_map:
+                formatted_string += c_map[cost_symbol]
+            else:
+                formatted_string += f"({cost_symbol})"
 
         return formatted_string + "**"
 
