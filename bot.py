@@ -133,16 +133,23 @@ class ScryfallAPI:
         )  # TODO make cache sqlite instead of python world so it maintains between starts / no eat ram
         self.base_uri = "https://api.scryfall.com"
 
-    def get_card(self, name):
-        if name in self.cache:
-            return self.cache[name]
-        else:
-            payload = {"fuzzy": name}
-            r = requests.get(f"{self.base_uri}/cards/named", params=payload)
-            sleep(0.25)  # todo better rate limiting
-            json = r.json()
-            self.cache[name] = json
-            return json
+    def get_cards(self, names):
+        cards = []
+
+        for name in names:
+            if name in self.cache:
+                cards.append(self.cache[name])
+            else:
+                payload = {"fuzzy": name}
+                r = requests.get(f"{self.base_uri}/cards/named", params=payload)
+                sleep(0.25)  # todo better rate limiting
+                json = r.json()
+                self.cache[name] = json
+                cards.append(json)
+        return cards
+
+
+scryfall_api = ScryfallAPI()
 
 
 @bot.event
@@ -150,23 +157,19 @@ async def on_ready():
     print("Bot is online")
 
 
-scryfall_api = ScryfallAPI()
-
-
 @bot.event
 async def on_message(message):
-    if "[" not in message.content and message.author.bot:
+    if ("[" not in message.content) or (message.author.bot):
         return
 
     count = 0
 
     square_bracket_regex = r"\[(.*?)\]"
     card_names = re.findall(square_bracket_regex, message.content)
+    raw_cards = scryfall_api.get_cards(card_names)
     cards = []
 
-    for name in card_names:
-        raw_card = scryfall_api.get_card(name)
-
+    for raw_card in raw_cards:
         color_identity = MagicCard.format_color_identity(raw_card["color_identity"])
         normal_image = raw_card["image_uris"]["normal"]
         prices = raw_card["prices"]
