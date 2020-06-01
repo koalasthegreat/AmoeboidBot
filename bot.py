@@ -4,12 +4,16 @@ import json
 import asyncio
 import re
 from typing import Tuple, Optional, List, Dict, Any
+from io import BytesIO
 
 import requests
+import sqlite3
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from pydantic import BaseModel, validator
+from PIL import Image
+
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -21,7 +25,8 @@ bot = commands.Bot(command_prefix=PREFIX)
 class MagicCard(BaseModel):
     name: str
     color_identity: Tuple[Any, ...]
-    normal_image: str
+    normal_image_url: str
+    normal_image_bytes: bytes
     oracle_text: Optional[str]
     flavor_text: Optional[str]
     scryfall_uri: str
@@ -36,7 +41,7 @@ class MagicCard(BaseModel):
         c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "⚫", "W": "⚪", "C": "⟡"}
         curly_brace_regex = r"\{(.*?)\}"
 
-        formatted_string = "**"
+        formatted_string = ""
         arr = re.findall(curly_brace_regex, cost)
 
         for cost_symbol in arr:
@@ -45,7 +50,7 @@ class MagicCard(BaseModel):
             else:
                 formatted_string += f"({cost_symbol})"
 
-        return formatted_string + "**"
+        return f"**{formatted_string}**"
 
     def format_color_identity(color):
         color_map = {
@@ -121,31 +126,68 @@ class MagicCard(BaseModel):
             price_string = MagicCard.format_prices(card.prices)
             embed.add_field(name="Prices:", value=price_string)
 
-        embed.set_image(url=card.normal_image)
+        embed.set_image(url=card.normal_image_url)
 
         return embed
 
 
 class ScryfallAPI:
     def __init__(self):
-        self.cache = (
-            {}
-        )  # TODO make cache sqlite instead of python world so it maintains between starts / no eat ram
         self.base_uri = "https://api.scryfall.com"
+
+        self.conn = sqlite3.connect("cache.db")
+        self.cursor = self.conn.cursor()
+
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS cards
+            (name text UNIQUE, raw_card text, image blob)
+        """
+        )
+        self.conn.commit()
 
     def get_cards(self, names):
         cards = []
 
         for name in names:
-            if name in self.cache:
-                cards.append(self.cache[name])
+            self.cursor.execute(
+                """
+                SELECT raw_card, image FROM cards WHERE name LIKE ?
+            """,
+                [name],
+            )
+            query_response = self.cursor.fetchone()
+
+            if query_response is not None:
+                cards.append([json.loads(query_response[0]), query_response[1]])
             else:
                 payload = {"fuzzy": name}
-                r = requests.get(f"{self.base_uri}/cards/named", params=payload)
-                sleep(0.25)  # todo better rate limiting
-                json = r.json()
-                self.cache[name] = json
-                cards.append(json)
+                card_request = requests.get(
+                    f"{self.base_uri}/cards/named", params=payload
+                )
+                sleep(0.25)  # TODO better rate limiting
+
+                if card_request.status_code == 404:
+                    print(f"Card with name {name} not found. Skipping")
+                    continue
+
+                raw_card = card_request.json()
+
+                print(raw_card)
+
+                image_request = requests.get(raw_card["image_uris"]["normal"])
+                sleep(0.25)
+                image = bytearray(image_request.content)
+
+                self.cursor.execute(
+                    """
+                    INSERT OR IGNORE INTO cards VALUES (?,?,?)
+                """,
+                    [raw_card["name"], json.dumps(raw_card), image],
+                )
+                self.conn.commit()
+                cards.append((raw_card, image))
+
         return cards
 
 
@@ -169,16 +211,17 @@ async def on_message(message):
     raw_cards = scryfall_api.get_cards(card_names)
     cards = []
 
-    for raw_card in raw_cards:
+    for raw_card, image in raw_cards:
         color_identity = MagicCard.format_color_identity(raw_card["color_identity"])
-        normal_image = raw_card["image_uris"]["normal"]
+        normal_image_url = raw_card["image_uris"]["normal"]
         prices = raw_card["prices"]
 
         splat = {
             **raw_card,
             **{
                 "color_identity": color_identity,
-                "normal_image": normal_image,
+                "normal_image_url": normal_image_url,
+                "normal_image_bytes": image,
                 "prices": prices,
             },
         }
@@ -186,17 +229,50 @@ async def on_message(message):
 
         cards.append(card)
 
-    for card in cards:
-        if count >= 5:
-            await message.channel.send(
-                "To prevent spam, only 5 cards can be processed at one time. Please make another query."
-            )
-            return
+    if len(cards) == 1:
+        card = cards[0]
 
-        count += 1
-        embed = MagicCard.generate_embed(card)
+        embed = MagicCard.generate_embed(cards[0])
         await message.channel.send(embed=embed)
-        await asyncio.sleep(1)
+
+    elif len(cards) <= 10 and len(cards) > 1:
+        images = []
+
+        for card in cards:
+            stream = BytesIO(card.normal_image_bytes)
+            image = Image.open(stream)
+            images.append(image)
+
+        buf = 20
+        parsed_image = Image.new(
+            "RGB",
+            (
+                (len(images) + 1) * buf + sum(image.width for image in images),
+                2 * buf + images[0].height,
+            ),
+            color=(255, 255, 255),
+        )
+
+        width_offset = buf
+
+        test = None
+
+        for image in images:
+            parsed_image.paste(image, (width_offset, buf))
+            width_offset += image.width + buf
+
+        parsed_image_bytes = BytesIO()
+        parsed_image.save(parsed_image_bytes, format="jpeg")
+
+        parsed_image_bytes.seek(0)
+
+        file = discord.File(parsed_image_bytes, filename="cards.jpg")
+        await message.channel.send(
+            f"Retrieved {len(cards)} cards. Call a single card for more details.",
+            file=file,
+        )
+    elif len(cards) > 10:
+        await message.channel.send("Please request 10 or less cards at a time.")
 
 
 bot.run(TOKEN)
