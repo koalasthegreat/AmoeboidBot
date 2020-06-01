@@ -244,17 +244,16 @@ async def on_message(message):
         # TODO fix this spaghetti garbage
 
         buf = 20
-        width = ((len(images) + 1)*buf + sum(image.width for image in images) if len(images) <= 5
-                else (6*buf + 5*images[0].width))
-        height = (2*buf if len(images) <= 5 else 3*buf) + images[0].height*((len(images) // 6) + 1) 
-
-        parsed_image = Image.new(
-            "RGB",
-            (
-                width, height
-            ),
-            color=(255, 255, 255),
+        width = (
+            (len(images) + 1) * buf + sum(image.width for image in images)
+            if len(images) <= 5
+            else (6 * buf + 5 * images[0].width)
         )
+        height = (2 * buf if len(images) <= 5 else 3 * buf) + images[0].height * (
+            (len(images) // 6) + 1
+        )
+
+        parsed_image = Image.new("RGB", (width, height), color=(255, 255, 255))
 
         width_offset = buf
         height_offset = buf
@@ -267,8 +266,6 @@ async def on_message(message):
             if width_offset >= parsed_image.width:
                 width_offset = buf
                 height_offset += image.height + buf
-
-
 
         parsed_image_bytes = BytesIO()
         parsed_image.save(parsed_image_bytes, format="jpeg")
