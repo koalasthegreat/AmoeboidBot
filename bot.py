@@ -173,8 +173,6 @@ class ScryfallAPI:
 
                 raw_card = card_request.json()
 
-                print(raw_card)
-
                 image_request = requests.get(raw_card["image_uris"]["normal"])
                 sleep(0.25)
                 image = bytearray(image_request.content)
