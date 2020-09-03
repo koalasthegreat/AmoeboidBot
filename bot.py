@@ -96,7 +96,9 @@ class MagicCard(BaseModel):
         prefix = ""
 
         embed.description = ""
-        embed.description += card.oracle_text
+        
+        if card.oracle_text is not None:
+            embed.description += card.oracle_text
 
         if embed.description != "":
             prefix = "\n\n"
