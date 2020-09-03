@@ -100,7 +100,7 @@ class MagicCard(BaseModel):
 
         if embed.description != "":
             prefix = "\n\n"
-        embed.description += f"{prefix}*{card.flavor_text}*"
+        embed.description += f"{prefix}*{card.flavor_text || ''}*"
 
         if embed.description != "":
             embed.description += f"\n\n[View on Scryfall]({card.scryfall_uri})"
@@ -279,6 +279,8 @@ async def on_message(message):
         )
     elif len(cards) > 10:
         await message.channel.send("Please request 10 or less cards at a time.")
-
+        
+    else:
+        await message.channel.send("Could not find any cards.")
 
 bot.run(TOKEN)
