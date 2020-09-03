@@ -100,7 +100,9 @@ class MagicCard(BaseModel):
 
         if embed.description != "":
             prefix = "\n\n"
-        embed.description += f"{prefix}*{card.flavor_text || ''}*"
+            
+        if card.flavor_text is not None:
+            embed.description += f"{prefix}*{card.flavor_text}*"
 
         if embed.description != "":
             embed.description += f"\n\n[View on Scryfall]({card.scryfall_uri})"
