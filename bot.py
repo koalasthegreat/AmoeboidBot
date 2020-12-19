@@ -177,7 +177,14 @@ class ScryfallAPI:
 
                 raw_card = card_request.json()
 
-                image_request = requests.get(raw_card["image_uris"]["normal"])
+                # TODO: find a way to put both faces on the same image
+                normal_image_url = None
+                if raw_card.get("image_uris") is None:
+                    normal_image_url = raw_card["card_faces"][0]["image_uris"]["normal"]
+                else:
+                    normal_image_url = raw_card["image_uris"]["normal"]
+
+                image_request = requests.get(normal_image_url)
                 sleep(0.25)
                 image = bytearray(image_request.content)
 
@@ -214,19 +221,53 @@ async def on_message(message):
     cards = []
 
     for raw_card, image in raw_cards:
-        color_identity = MagicCard.format_color_identity(raw_card["color_identity"])
-        normal_image_url = raw_card["image_uris"]["normal"]
         prices = raw_card["prices"]
+        color_identity = MagicCard.format_color_identity(raw_card["color_identity"])
 
-        splat = {
-            **raw_card,
-            **{
-                "color_identity": color_identity,
-                "normal_image_url": normal_image_url,
-                "normal_image_bytes": image,
+        splat = raw_card
+
+        if raw_card.get("card_faces") is not None:
+            front_face = raw_card["card_faces"][0]
+
+            normal_image_url = front_face["image_uris"]["normal"]
+            oracle_text = front_face.get("oracle_text")
+            flavor_text = front_face.get("flavor_text")
+            colors = front_face.get("colors")
+            mana_cost = front_face.get("mana_cost")
+            power = front_face.get("power")
+            toughness = front_face.get("toughness")
+            loyalty = front_face.get("loyalty")
+
+            splat.update(
+                {
+                    "normal_image_url": normal_image_url,
+                    "normal_image_bytes": image,
+                    "oracle_text": oracle_text,
+                    "flavor_text": flavor_text,
+                    "colors": colors,
+                    "mana_cost": mana_cost,
+                    "power": power,
+                    "toughness": toughness,
+                    "loyalty": loyalty,
+                }
+            )
+
+        else:
+            normal_image_url = raw_card["image_uris"]["normal"]
+            splat.update(
+                {
+                    "normal_image_url": normal_image_url,
+                    "normal_image_bytes": image,
+                }
+            )
+
+        splat.update(
+            {
                 "prices": prices,
-            },
-        }
+                "color_identity": color_identity,
+            }
+        )
+
         card = MagicCard(**splat)
 
         cards.append(card)
