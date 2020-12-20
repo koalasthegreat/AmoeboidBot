@@ -21,6 +21,43 @@ PREFIX = os.getenv("PREFIX", default="a!")
 
 bot = commands.Bot(command_prefix=PREFIX)
 
+def bytes_to_discfile(byte_arr, filename):
+    iobytes = BytesIO(byte_arr)
+    iobytes.seek(0)
+    return discord.File(iobytes, filename=filename)
+
+def img_to_bytearray(img):
+    byte_arr = BytesIO()
+    img.save(byte_arr, format='PNG')
+    return byte_arr.getvalue()
+
+def stitch_images_horz(images, buf_horz=0, buf_vert=0, bgcolor=(255,255,255)):
+    new_img_size = (
+        sum([img.width for img in images]) + buf_horz * (len(images) + 1),
+        max([img.height for img in images]) + buf_vert * 2
+    )
+    new_img = Image.new('RGB', new_img_size, color=bgcolor)
+    for idx,paste_img in enumerate(images):
+        paste_img_loc = (
+            sum([img.width for img in images[:idx]]) + buf_horz * (idx + 1),
+            buf_vert
+        )
+        new_img.paste(paste_img, paste_img_loc)
+    return new_img
+
+def stitch_images_vert(images, buf_horz=0, buf_vert=0, bgcolor=(255,255,255)):
+    new_img_size = (
+        max([img.width for img in images]) + buf_horz * 2,
+        sum([img.height for img in images]) + buf_vert * (len(images) + 1)
+    )
+    new_img = Image.new('RGB', new_img_size, color=bgcolor)
+    for idx,paste_img in enumerate(images):
+        paste_img_loc = (
+            buf_horz,
+            sum([img.width for img in images[:idx]]) + buf_vert * (idx + 1)
+        )
+        new_img.paste(paste_img, paste_img_loc)
+    return new_img
 
 class MagicCard(BaseModel):
     name: str
@@ -130,10 +167,7 @@ class MagicCard(BaseModel):
             price_string = MagicCard.format_prices(card.prices)
             embed.add_field(name="Prices:", value=price_string)
 
-        embed.set_image(url=card.normal_image_url)
-
         return embed
-
 
 class ScryfallAPI:
     def __init__(self):
@@ -177,16 +211,20 @@ class ScryfallAPI:
 
                 raw_card = card_request.json()
 
-                # TODO: find a way to put both faces on the same image
                 normal_image_url = None
                 if raw_card.get("image_uris") is None:
-                    normal_image_url = raw_card["card_faces"][0]["image_uris"]["normal"]
+                    images = []
+                    for face in raw_card["card_faces"]:
+                        image_url = face["image_uris"]["normal"]
+                        image_resp = requests.get(image_url)
+                        face_image = Image.open(BytesIO(image_resp.content))
+                        images.append(face_image)
+                    image = img_to_bytearray(stitch_images_horz(images, buf_horz=10))
                 else:
                     normal_image_url = raw_card["image_uris"]["normal"]
-
-                image_request = requests.get(normal_image_url)
-                sleep(0.25)
-                image = bytearray(image_request.content)
+                    image_request = requests.get(normal_image_url)
+                    sleep(0.25)
+                    image = bytearray(image_request.content)
 
                 self.cursor.execute(
                     """
@@ -275,8 +313,12 @@ async def on_message(message):
     if len(cards) == 1:
         card = cards[0]
 
-        embed = MagicCard.generate_embed(cards[0])
-        await message.channel.send(embed=embed)
+        embed = MagicCard.generate_embed(card)
+
+        img = bytes_to_discfile(card.normal_image_bytes, "card.jpg")
+        embed.set_image(url="attachment://card.jpg")
+
+        await message.channel.send(embed=embed, file=img)
 
     elif len(cards) <= 10 and len(cards) > 1:
         images = []
@@ -287,6 +329,8 @@ async def on_message(message):
             images.append(image)
 
         # TODO fix this spaghetti garbage
+        # Note/cmdr0 - Should be able to use stitch_images with some business
+        #   logic here; current math does not account for dual-faced cards
 
         buf = 20
         width = (
@@ -322,6 +366,7 @@ async def on_message(message):
             f"Retrieved {len(cards)} cards. Call a single card for more details.",
             file=file,
         )
+    # TODO: Do this check before doing API calls
     elif len(cards) > 10:
         await message.channel.send("Please request 10 or less cards at a time.")
         
