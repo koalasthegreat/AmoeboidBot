@@ -54,7 +54,7 @@ def stitch_images_vert(images, buf_horz=0, buf_vert=0, bgcolor=(255,255,255)):
     for idx,paste_img in enumerate(images):
         paste_img_loc = (
             buf_horz,
-            sum([img.width for img in images[:idx]]) + buf_vert * (idx + 1)
+            sum([img.height for img in images[:idx]]) + buf_vert * (idx + 1)
         )
         new_img.paste(paste_img, paste_img_loc)
     return new_img
@@ -336,43 +336,28 @@ async def on_message(message):
             image = Image.open(stream)
             images.append(image)
 
-        # TODO fix this spaghetti garbage
         # Note/cmdr0 - Should be able to use stitch_images with some business
         #   logic here; current math does not account for dual-faced cards
+        # Note/koalasthegreat - Refactored to use the stitch_images functions,
+        #   accounting for the width of dual card images still not implemented
 
-        buf = 20
-        width = (
-            (len(images) + 1) * buf + sum(image.width for image in images)
-            if len(images) <= 5
-            else (6 * buf + 5 * images[0].width)
-        )
-        height = (2 * buf if len(images) <= 5 else 3 * buf) + images[0].height * (
-            (len(images) // 6) + 1
-        )
+        parsed_image = None
 
-        parsed_image = Image.new("RGB", (width, height), color=(255, 255, 255))
+        if len(images) <= 5:
+            parsed_image = stitch_images_horz(images, buf_horz=10, buf_vert=10)
 
-        width_offset = buf
-        height_offset = buf
+        else:
+            top = stitch_images_horz(images[:5], buf_horz=10, buf_vert=5)
+            bottom = stitch_images_horz(images[5:], buf_horz=10, buf_vert=5)
 
-        for image in images:
-            parsed_image.paste(image, (width_offset, height_offset))
+            parsed_image = stitch_images_vert([top, bottom])
 
-            width_offset += image.width + buf
+        parsed_image_bytes = img_to_bytearray(parsed_image)
+        parsed_image_file = bytes_to_discfile(parsed_image_bytes, "cards.jpg")
 
-            if width_offset >= parsed_image.width:
-                width_offset = buf
-                height_offset += image.height + buf
-
-        parsed_image_bytes = BytesIO()
-        parsed_image.save(parsed_image_bytes, format="jpeg")
-
-        parsed_image_bytes.seek(0)
-
-        file = discord.File(parsed_image_bytes, filename="cards.jpg")
         await message.channel.send(
             f"Retrieved {len(cards)} cards. Call a single card for more details.",
-            file=file,
+            file=parsed_image_file,
         )
 
 
