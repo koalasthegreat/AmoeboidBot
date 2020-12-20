@@ -4,7 +4,7 @@ import json
 import asyncio
 import re
 from typing import Tuple, Optional, List, Dict, Any
-from io import BytesIO
+from io import BytesIO, StringIO
 
 import requests
 import sqlite3
