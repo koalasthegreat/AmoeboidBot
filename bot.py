@@ -255,6 +255,11 @@ async def on_message(message):
 
     square_bracket_regex = r"\[(.*?)\]"
     card_names = re.findall(square_bracket_regex, message.content)
+
+    if len(card_names) > 10:
+        await message.channel.send("Please request 10 or less cards at a time.")
+        return
+
     raw_cards = scryfall_api.get_cards(card_names)
     cards = []
 
@@ -310,7 +315,10 @@ async def on_message(message):
 
         cards.append(card)
 
-    if len(cards) == 1:
+    if len(cards) == 0:
+            await message.channel.send("Could not find any cards.")
+
+    elif len(cards) == 1:
         card = cards[0]
 
         embed = MagicCard.generate_embed(card)
@@ -320,7 +328,7 @@ async def on_message(message):
 
         await message.channel.send(embed=embed, file=img)
 
-    elif len(cards) <= 10 and len(cards) > 1:
+    else:
         images = []
 
         for card in cards:
@@ -366,11 +374,6 @@ async def on_message(message):
             f"Retrieved {len(cards)} cards. Call a single card for more details.",
             file=file,
         )
-    # TODO: Do this check before doing API calls
-    elif len(cards) > 10:
-        await message.channel.send("Please request 10 or less cards at a time.")
-        
-    else:
-        await message.channel.send("Could not find any cards.")
+
 
 bot.run(TOKEN)
