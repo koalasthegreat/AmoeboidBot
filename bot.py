@@ -5,6 +5,7 @@ import asyncio
 import re
 from typing import Tuple, Optional, List, Dict, Any
 from io import BytesIO, StringIO
+from datetime import date
 
 import requests
 import sqlite3
@@ -169,6 +170,11 @@ class MagicCard(BaseModel):
 
         return embed
 
+class MagicCardRuling(BaseModel):
+    published_at: date
+    source: str
+    comment: str
+
 class ScryfallAPI:
     def __init__(self):
         self.base_uri = "https://api.scryfall.com"
@@ -237,8 +243,83 @@ class ScryfallAPI:
 
         return cards
 
+    def get_rulings(self, rulings_uri):
+        ruling_request = requests.get(rulings_uri)
+
+        if ruling_request.status_code == 200:
+            raw_rulings = ruling_request.json()
+            rulings = []
+
+            for ruling in raw_rulings["data"]:
+                rulings.append(MagicCardRuling(**ruling))
+
+            return rulings
+
+        else:
+            return []
+
 
 scryfall_api = ScryfallAPI()
+
+
+@bot.command(
+    name='rulings',
+    brief="Shows rulings for the given card",
+    description="""
+Looks up and displays the rulings for the given card. Will sort
+them into rulings from both WOTC and Scryfall.
+""",
+)
+async def _get_rulings(ctx, *args):
+    card_name = " ".join(args)
+
+    card = scryfall_api.get_cards([card_name])
+    sleep(0.25) # TODO: better ratelimiting
+
+    if len(card) > 0 and card[0][0].get("rulings_uri"):
+        card_name = card[0][0]["name"]
+        rulings = scryfall_api.get_rulings(card[0][0]["rulings_uri"])
+
+        if len(rulings) == 0:
+            await ctx.send(f"Could not find rulings for `{card_name}`.")
+            return
+
+        wotc = []
+        scryfall = []
+
+        for ruling in rulings:
+            if ruling.source == "wotc":
+                wotc.append(ruling)
+            else:
+                scryfall.append(ruling)
+
+        embed = discord.Embed(type="rich")
+        embed.title = "Rulings for " + card_name
+
+        if len(wotc) > 0:
+            field = ""
+
+            for ruling in wotc:
+                field += "**" + ruling.published_at.strftime("%m/%d/%Y") + "**: " + ruling.comment + "\n\n"
+
+            field = field.strip()
+
+            embed.add_field(name="WOTC Rulings:", value=field)
+            
+        if len(scryfall) > 0:
+            field = ""
+
+            for ruling in wotc:
+                field += "**" + ruling.published_at + "** : " + ruling.comment + "\n\n"
+
+            field = field.strip()
+
+            embed.add_field(name="Scryfall Rulings:", value=field)
+
+        await ctx.send(embed=embed)
+
+    else:
+        await ctx.send(f"Card with name `{card_name}` not found.")
 
 
 @bot.event
@@ -249,6 +330,7 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     if ("[" not in message.content) or (message.author.bot):
+        await bot.process_commands(message)
         return
 
     count = 0
