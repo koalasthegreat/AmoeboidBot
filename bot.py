@@ -22,43 +22,48 @@ PREFIX = os.getenv("PREFIX", default="a!")
 
 bot = commands.Bot(command_prefix=PREFIX)
 
+
 def bytes_to_discfile(byte_arr, filename):
     iobytes = BytesIO(byte_arr)
     iobytes.seek(0)
     return discord.File(iobytes, filename=filename)
 
+
 def img_to_bytearray(img):
     byte_arr = BytesIO()
-    img.save(byte_arr, format='PNG')
+    img.save(byte_arr, format="PNG")
     return byte_arr.getvalue()
 
-def stitch_images_horz(images, buf_horz=0, buf_vert=0, bgcolor=(255,255,255)):
+
+def stitch_images_horz(images, buf_horz=0, buf_vert=0, bgcolor=(255, 255, 255)):
     new_img_size = (
         sum([img.width for img in images]) + buf_horz * (len(images) + 1),
-        max([img.height for img in images]) + buf_vert * 2
+        max([img.height for img in images]) + buf_vert * 2,
     )
-    new_img = Image.new('RGB', new_img_size, color=bgcolor)
-    for idx,paste_img in enumerate(images):
+    new_img = Image.new("RGB", new_img_size, color=bgcolor)
+    for idx, paste_img in enumerate(images):
         paste_img_loc = (
             sum([img.width for img in images[:idx]]) + buf_horz * (idx + 1),
-            buf_vert
+            buf_vert,
         )
         new_img.paste(paste_img, paste_img_loc)
     return new_img
 
-def stitch_images_vert(images, buf_horz=0, buf_vert=0, bgcolor=(255,255,255)):
+
+def stitch_images_vert(images, buf_horz=0, buf_vert=0, bgcolor=(255, 255, 255)):
     new_img_size = (
         max([img.width for img in images]) + buf_horz * 2,
-        sum([img.height for img in images]) + buf_vert * (len(images) + 1)
+        sum([img.height for img in images]) + buf_vert * (len(images) + 1),
     )
-    new_img = Image.new('RGB', new_img_size, color=bgcolor)
-    for idx,paste_img in enumerate(images):
+    new_img = Image.new("RGB", new_img_size, color=bgcolor)
+    for idx, paste_img in enumerate(images):
         paste_img_loc = (
             buf_horz,
-            sum([img.height for img in images[:idx]]) + buf_vert * (idx + 1)
+            sum([img.height for img in images[:idx]]) + buf_vert * (idx + 1),
         )
         new_img.paste(paste_img, paste_img_loc)
     return new_img
+
 
 class MagicCard(BaseModel):
     name: str
@@ -134,13 +139,13 @@ class MagicCard(BaseModel):
         prefix = ""
 
         embed.description = ""
-        
+
         if card.oracle_text is not None:
             embed.description += card.oracle_text
 
         if embed.description != "":
             prefix = "\n\n"
-            
+
         if card.flavor_text is not None:
             embed.description += f"{prefix}*{card.flavor_text}*"
 
@@ -170,10 +175,12 @@ class MagicCard(BaseModel):
 
         return embed
 
+
 class MagicCardRuling(BaseModel):
     published_at: date
     source: str
     comment: str
+
 
 class ScryfallAPI:
     def __init__(self):
@@ -263,7 +270,7 @@ scryfall_api = ScryfallAPI()
 
 
 @bot.command(
-    name='rulings',
+    name="rulings",
     brief="Shows rulings for the given card",
     description="""
 Looks up and displays the rulings for the given card. Will sort
@@ -274,7 +281,7 @@ async def _get_rulings(ctx, *args):
     card_name = " ".join(args)
 
     card = scryfall_api.get_cards([card_name])
-    sleep(0.25) # TODO: better ratelimiting
+    sleep(0.25)  # TODO: better ratelimiting
 
     if len(card) > 0 and card[0][0].get("rulings_uri"):
         card_name = card[0][0]["name"]
@@ -300,12 +307,18 @@ async def _get_rulings(ctx, *args):
             field = ""
 
             for ruling in wotc:
-                field += "**" + ruling.published_at.strftime("%m/%d/%Y") + "**: " + ruling.comment + "\n\n"
+                field += (
+                    "**"
+                    + ruling.published_at.strftime("%m/%d/%Y")
+                    + "**: "
+                    + ruling.comment
+                    + "\n\n"
+                )
 
             field = field.strip()
 
             embed.add_field(name="WOTC Rulings:", value=field)
-            
+
         if len(scryfall) > 0:
             field = ""
 
@@ -398,7 +411,7 @@ async def on_message(message):
         cards.append(card)
 
     if len(cards) == 0:
-            await message.channel.send("Could not find any cards.")
+        await message.channel.send("Could not find any cards.")
 
     elif len(cards) == 1:
         card = cards[0]
