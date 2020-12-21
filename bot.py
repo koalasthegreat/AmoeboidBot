@@ -291,43 +291,29 @@ async def _get_rulings(ctx, *args):
             await ctx.send(f"Could not find rulings for `{card_name}`.")
             return
 
-        wotc = []
-        scryfall = []
-
-        for ruling in rulings:
-            if ruling.source == "wotc":
-                wotc.append(ruling)
-            else:
-                scryfall.append(ruling)
+        rulings = [ruling for ruling in rulings if ruling.source == "wotc"]
 
         embed = discord.Embed(type="rich")
         embed.title = "Rulings for " + card_name
 
-        if len(wotc) > 0:
-            field = ""
+        description = ""
 
-            for ruling in wotc:
-                field += (
-                    "**"
-                    + ruling.published_at.strftime("%m/%d/%Y")
-                    + "**: "
-                    + ruling.comment
-                    + "\n\n"
-                )
+        for ruling in rulings:
+            description += (
+                "**"
+                + ruling.published_at.strftime("%m/%d/%Y")
+                + "**: "
+                + ruling.comment
+                + "\n\n"
+            )
 
-            field = field.strip()
+        embed.description = description.strip()
 
-            embed.add_field(name="WOTC Rulings:", value=field)
-
-        if len(scryfall) > 0:
-            field = ""
-
-            for ruling in wotc:
-                field += "**" + ruling.published_at + "** : " + ruling.comment + "\n\n"
-
-            field = field.strip()
-
-            embed.add_field(name="Scryfall Rulings:", value=field)
+        if len(description) > 2048:
+            embed.description = (
+                embed.description[:1900]
+                + f"...\n\n[View Full Rulings on Scryfall]({card[0][0]['scryfall_uri']})"
+            )
 
         await ctx.send(embed=embed)
 
