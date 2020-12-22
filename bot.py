@@ -271,6 +271,7 @@ scryfall_api = ScryfallAPI()
 
 @bot.command(
     name="rulings",
+    aliases=["rule", "ruling"],
     brief="Shows rulings for the given card",
     description="""
 Looks up and displays the rulings for the given card. Will sort
