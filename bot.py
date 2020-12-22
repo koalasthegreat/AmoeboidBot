@@ -19,6 +19,7 @@ from PIL import Image
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 PREFIX = os.getenv("PREFIX", default="a!")
+LEFT_SPLIT, RIGHT_SPLIT = os.getenv("WRAPPING", default="[[*]]").split("*")
 
 bot = commands.Bot(command_prefix=PREFIX)
 
@@ -329,14 +330,12 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if ("[" not in message.content) or (message.author.bot):
+    if (LEFT_SPLIT and RIGHT_SPLIT not in message.content) or (message.author.bot):
         await bot.process_commands(message)
         return
 
-    count = 0
-
-    square_bracket_regex = r"\[(.*?)\]"
-    card_names = re.findall(square_bracket_regex, message.content)
+    regex = rf"{re.escape(LEFT_SPLIT)}(.*?){re.escape(RIGHT_SPLIT)}"
+    card_names = re.findall(regex, message.content)
 
     if len(card_names) > 10:
         await message.channel.send("Please request 10 or less cards at a time.")
