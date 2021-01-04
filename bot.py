@@ -18,10 +18,9 @@ from PIL import Image
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
-PREFIX = os.getenv("PREFIX", default="a!")
-LEFT_SPLIT, RIGHT_SPLIT = os.getenv("WRAPPING", default="[[*]]").split("*")
-
-bot = commands.Bot(command_prefix=PREFIX)
+DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
+DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
+DB_NAME = os.getenv("DB_NAME", default="bot.db")
 
 
 def bytes_to_discfile(byte_arr, filename):
@@ -64,6 +63,10 @@ def stitch_images_vert(images, buf_horz=0, buf_vert=0, bgcolor=(255, 255, 255)):
         )
         new_img.paste(paste_img, paste_img_loc)
     return new_img
+
+
+def get_prefix(client, message):
+    return bot_settings.get_prefix(message.guild.id)
 
 
 class MagicCard(BaseModel):
@@ -183,11 +186,89 @@ class MagicCardRuling(BaseModel):
     comment: str
 
 
+class BotSettings:
+    def __init__(self):
+        self.conn = sqlite3.connect(DB_NAME)
+        self.cursor = self.conn.cursor()
+
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings
+            (server_id text UNIQUE, prefix text, wrapping text)    
+        """
+        )
+        self.conn.commit()
+
+    def set_prefix(self, server_id, prefix):
+        self.cursor.execute(
+            """
+            INSERT OR IGNORE INTO settings
+            (server_id, prefix, wrapping)
+            VALUES(?, ?, ?)
+        """,
+            (server_id, DEFAULT_PREFIX, DEFAULT_WRAPPING),
+        )
+
+        self.cursor.execute(
+            """
+            UPDATE settings
+            SET prefix=?
+            WHERE server_id=?
+        """,
+            (prefix, server_id),
+        )
+
+        self.conn.commit()
+
+    def set_wrapping(self, server_id, wrapping):
+        self.cursor.execute(
+            """
+            INSERT OR IGNORE INTO settings
+            (server_id, prefix, wrapping)
+            VALUES(?, ?, ?)
+        """,
+            (server_id, DEFAULT_PREFIX, DEFAULT_WRAPPING),
+        )
+
+        self.cursor.execute(
+            """
+            UPDATE settings
+            SET wrapping=?
+            WHERE server_id=?
+        """,
+            (wrapping, server_id),
+        )
+
+        self.conn.commit()
+
+    def get_prefix(self, server_id):
+        self.cursor.execute(
+            "SELECT prefix FROM settings WHERE server_id=?", (server_id,)
+        )
+        result = self.cursor.fetchone()
+
+        if result is not None:
+            return result[0]
+        else:
+            return DEFAULT_PREFIX
+
+    def get_wrapping(self, server_id):
+        self.cursor.execute(
+            "SELECT wrapping FROM settings WHERE server_id=?", (server_id,)
+        )
+        result = self.cursor.fetchone()
+
+        if result is not None:
+            return result[0]
+        else:
+            return DEFAULT_PREFIX
+
+
 class ScryfallAPI:
     def __init__(self):
         self.base_uri = "https://api.scryfall.com"
 
-        self.conn = sqlite3.connect("cache.db")
+        self.conn = sqlite3.connect(DB_NAME)
         self.cursor = self.conn.cursor()
 
         self.cursor.execute(
@@ -267,7 +348,57 @@ class ScryfallAPI:
             return []
 
 
+bot_settings = BotSettings()
+bot = commands.Bot(command_prefix=get_prefix)
+
 scryfall_api = ScryfallAPI()
+
+
+@bot.command(
+    name="prefix",
+    brief="Change/view the bot's prefix",
+    description="""
+Changes/views the bot's prefix for the server being run in.
+Only usable by server administrators.    
+""",
+)
+@commands.has_permissions(administrator=True)
+async def _change_prefix(ctx, arg=None):
+    if arg is None:
+        prefix = bot_settings.get_prefix(ctx.message.guild.id)
+        await ctx.send(f"The bot's prefix for this server is currently `{prefix}`.")
+
+    else:
+        bot_settings.set_prefix(ctx.message.guild.id, arg)
+        await ctx.send(f"Bot prefix changed to `{arg}`.")
+
+
+@bot.command(
+    name="wrapping",
+    aliases=["wrap", "wrapper"],
+    brief="Change or view the bot's wrapping",
+    description="""
+Changes/shows the card wrapping detection for the server 
+being run in. Only usable by server administrators.
+""",
+)
+@commands.has_permissions(administrator=True)
+async def _change_wrapping(ctx, arg=None):
+    if arg is None:
+        wrapping = bot_settings.get_wrapping(ctx.message.guild.id)
+        await ctx.send(f"The bot's wrapping for this server is currently `{wrapping}`.")
+
+    else:
+        regex = r"([^\s\*]+\*[^\s\*]+)"
+
+        if re.match(regex, arg):
+            bot_settings.set_wrapping(ctx.message.guild.id, arg)
+            await ctx.send(f"Bot wrapping changed to `{arg}`.")
+
+        else:
+            await ctx.send(
+                "Bot wrapping is not valid. Wrap a \* in characters, like this: `[[*]]`"
+            )
 
 
 @bot.command(
@@ -330,8 +461,16 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if (LEFT_SPLIT and RIGHT_SPLIT not in message.content) or (message.author.bot):
+    if (
+        message.author.bot
+        or bot_settings.get_prefix(message.guild.id) in message.content
+    ):
         await bot.process_commands(message)
+        return
+
+    left_split, right_split = bot_settings.get_wrapping(message.guild.id).split("*")
+
+    if left_split and right_split not in message.content:
         return
 
     regex = rf"{re.escape(LEFT_SPLIT)}(.*?){re.escape(RIGHT_SPLIT)}"
