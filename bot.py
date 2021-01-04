@@ -186,7 +186,7 @@ class MagicCardRuling(BaseModel):
     comment: str
 
 
-class BotSettings():
+class BotSettings:
     def __init__(self):
         self.conn = sqlite3.connect(DB_NAME)
         self.cursor = self.conn.cursor()
@@ -242,7 +242,9 @@ class BotSettings():
         self.conn.commit()
 
     def get_prefix(self, server_id):
-        self.cursor.execute("SELECT prefix FROM settings WHERE server_id=?", (server_id,))
+        self.cursor.execute(
+            "SELECT prefix FROM settings WHERE server_id=?", (server_id,)
+        )
         result = self.cursor.fetchone()
 
         if result is not None:
@@ -251,7 +253,9 @@ class BotSettings():
             return DEFAULT_PREFIX
 
     def get_wrapping(self, server_id):
-        self.cursor.execute("SELECT wrapping FROM settings WHERE server_id=?", (server_id,))
+        self.cursor.execute(
+            "SELECT wrapping FROM settings WHERE server_id=?", (server_id,)
+        )
         result = self.cursor.fetchone()
 
         if result is not None:
@@ -349,13 +353,14 @@ bot = commands.Bot(command_prefix=get_prefix)
 
 scryfall_api = ScryfallAPI()
 
+
 @bot.command(
     name="prefix",
     brief="Change/view the bot's prefix",
     description="""
 Changes/views the bot's prefix for the server being run in.
 Only usable by server administrators.    
-"""
+""",
 )
 @commands.has_permissions(administrator=True)
 async def _change_prefix(ctx, arg=None):
@@ -375,7 +380,7 @@ async def _change_prefix(ctx, arg=None):
     description="""
 Changes/shows the card wrapping detection for the server 
 being run in. Only usable by server administrators.
-"""
+""",
 )
 @commands.has_permissions(administrator=True)
 async def _change_wrapping(ctx, arg=None):
@@ -391,7 +396,9 @@ async def _change_wrapping(ctx, arg=None):
             await ctx.send(f"Bot wrapping changed to `{arg}`.")
 
         else:
-            await ctx.send("Bot wrapping is not valid. Wrap a \* in characters, like this: `[[*]]`")
+            await ctx.send(
+                "Bot wrapping is not valid. Wrap a \* in characters, like this: `[[*]]`"
+            )
 
 
 @bot.command(
@@ -454,7 +461,10 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if message.author.bot or bot_settings.get_prefix(message.guild.id) in message.content:
+    if (
+        message.author.bot
+        or bot_settings.get_prefix(message.guild.id) in message.content
+    ):
         await bot.process_commands(message)
         return
 
