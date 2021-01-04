@@ -473,7 +473,7 @@ async def on_message(message):
     if left_split and right_split not in message.content:
         return
 
-    regex = rf"{re.escape(LEFT_SPLIT)}(.*?){re.escape(RIGHT_SPLIT)}"
+    regex = rf"{re.escape(left_split)}(.*?){re.escape(right_split)}"
     card_names = re.findall(regex, message.content)
 
     if len(card_names) > 10:
