@@ -18,10 +18,12 @@ from PIL import Image
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
-PREFIX = os.getenv("PREFIX", default="a!")
-LEFT_SPLIT, RIGHT_SPLIT = os.getenv("WRAPPING", default="[[*]]").split("*")
+DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
+DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
+LEFT_SPLIT, RIGHT_SPLIT = DEFAULT_WRAPPING.split("*")
+DB_NAME = os.getenv("DB_NAME", default="bot.db")
 
-bot = commands.Bot(command_prefix=PREFIX)
+bot = commands.Bot(command_prefix=DEFAULT_PREFIX)
 
 
 def bytes_to_discfile(byte_arr, filename):
@@ -183,11 +185,85 @@ class MagicCardRuling(BaseModel):
     comment: str
 
 
+class BotSettings:
+    def __init__(self):
+        self.conn = sqlite3.connect(DB_NAME)
+        self.cursor = self.conn.cursor()
+
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings
+            (server_id text UNIQUE, prefix text, wrapping text)    
+        """
+        )
+        self.conn.commit()
+
+    def set_prefix(self, server_id, prefix):
+        self.cursor.execute(
+            """
+            INSERT OR IGNORE INTO settings
+            (server_id, prefix, wrapping)
+            VALUES(?, ?, ?)
+        """,
+            (server_id, DEFAULT_PREFIX, DEFAULT_WRAPPING),
+        )
+
+        self.cursor.execute(
+            """
+            UPDATE settings
+            SET prefix=?
+            WHERE id=?
+        """,
+            (prefix, server_id),
+        )
+
+        self.conn.commit()
+
+    def set_wrapping(self, server_id, wrapping):
+        self.cursor.execute(
+            """
+            INSERT OR IGNORE INTO settings
+            (server_id, prefix, wrapping)
+            VALUES(?, ?, ?)
+        """,
+            (server_id, DEFAULT_PREFIX, DEFAULT_WRAPPING),
+        )
+
+        self.cursor.execute(
+            """
+            UPDATE settings
+            SET wrapping=?
+            WHERE id=?
+        """,
+            (wrapping, server_id),
+        )
+
+        self.conn.commit()
+
+    def get_prefix(self, server_id):
+        self.cursor.execute("SELECT * FROM settings WHERE server_id=?", (server_id,))
+        result = self.cursor.fetchone()
+
+        if result is not None:
+            return result["wrapping"]
+        else:
+            return DEFAULT_WRAPPING
+
+    def get_wrapping(self, server_id):
+        self.cursor.execute("SELECT * FROM settings WHERE server_id=?", (server_id,))
+        result = self.cursor.fetchone()
+
+        if result is not None:
+            return result["wrapping"]
+        else:
+            return DEFAULT_PREFIX
+
+
 class ScryfallAPI:
     def __init__(self):
         self.base_uri = "https://api.scryfall.com"
 
-        self.conn = sqlite3.connect("cache.db")
+        self.conn = sqlite3.connect(DB_NAME)
         self.cursor = self.conn.cursor()
 
         self.cursor.execute(
