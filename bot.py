@@ -85,7 +85,7 @@ class MagicCard(BaseModel):
     prices: Optional[Dict[str, Any]]
 
     def format_color_string(cost):
-        c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "⚫", "W": "⚪", "C": "⟡"}
+        c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "🟣", "W": "⚪", "C": "⟡"}
         curly_brace_regex = r"\{(.*?)\}"
 
         formatted_string = ""
