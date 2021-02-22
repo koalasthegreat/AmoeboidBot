@@ -488,20 +488,26 @@ async def on_message(message):
             left = raw_card["card_faces"][0]
             right = raw_card["card_faces"][1]
 
-            color_string = [left.get('mana_cost'), right.get('mana_cost')]
-            color_string = [item for item in color_string if item is not None and item != ""]
-            color_string = [MagicCard.format_color_string(cost) for cost in color_string]
+            color_string = [left.get("mana_cost"), right.get("mana_cost")]
+            color_string = [
+                item for item in color_string if item is not None and item != ""
+            ]
+            color_string = [
+                MagicCard.format_color_string(cost) for cost in color_string
+            ]
             color_string = " // ".join(color_string)
 
-            oracle_text = [left.get('oracle_text'), right.get('oracle_text')]
+            oracle_text = [left.get("oracle_text"), right.get("oracle_text")]
             oracle_text = [item for item in oracle_text if item is not None]
             oracle_text = "\n----\n".join(oracle_text)
-            if oracle_text == "": oracle_text = None
+            if oracle_text == "":
+                oracle_text = None
 
-            flavor_text = [left.get('flavor_text'), right.get('flavor_text')]
+            flavor_text = [left.get("flavor_text"), right.get("flavor_text")]
             flavor_text = [item for item in flavor_text if item is not None]
             flavor_text = "\n----\n".join(flavor_text)
-            if flavor_text == "": flavor_text = None
+            if flavor_text == "":
+                flavor_text = None
 
             color_identity = MagicCard.format_color_identity(raw_card["color_identity"])
             normal_image_url = raw_card["image_uris"]["normal"]
@@ -547,20 +553,26 @@ async def on_message(message):
 
             normal_image_url = front_face["image_uris"]["normal"]
 
-            color_string = [front_face.get('mana_cost'), back_face.get('mana_cost')]
-            color_string = [item for item in color_string if item is not None and item != ""]
-            color_string = [MagicCard.format_color_string(cost) for cost in color_string]
+            color_string = [front_face.get("mana_cost"), back_face.get("mana_cost")]
+            color_string = [
+                item for item in color_string if item is not None and item != ""
+            ]
+            color_string = [
+                MagicCard.format_color_string(cost) for cost in color_string
+            ]
             color_string = " // ".join(color_string)
 
-            oracle_text = [front_face.get('oracle_text'), back_face.get('oracle_text')]
+            oracle_text = [front_face.get("oracle_text"), back_face.get("oracle_text")]
             oracle_text = [item for item in oracle_text if item is not None]
             oracle_text = "\n----\n".join(oracle_text)
-            if oracle_text == "": oracle_text = None
+            if oracle_text == "":
+                oracle_text = None
 
-            flavor_text = [front_face.get('flavor_text'), back_face.get('flavor_text')]
+            flavor_text = [front_face.get("flavor_text"), back_face.get("flavor_text")]
             flavor_text = [item for item in flavor_text if item is not None]
             flavor_text = "\n----\n".join(flavor_text)
-            if flavor_text == "": flavor_text = None
+            if flavor_text == "":
+                flavor_text = None
 
             color_identity = MagicCard.format_color_identity(raw_card["color_identity"])
 
