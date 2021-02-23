@@ -1,11 +1,11 @@
 from time import sleep
+import datetime
 import os
 import json
 import asyncio
 import re
 from typing import Tuple, Optional, List, Dict, Any
 from io import BytesIO, StringIO
-from datetime import date
 
 import requests
 import sqlite3
@@ -21,6 +21,7 @@ TOKEN = os.getenv("TOKEN")
 DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
 DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
 DB_NAME = os.getenv("DB_NAME", default="bot.db")
+REFRESH_INTERVAL = os.getenv("REFRESH_INTERVAL", default=24)
 
 
 def bytes_to_discfile(byte_arr, filename):
@@ -179,7 +180,7 @@ class MagicCard(BaseModel):
 
 
 class MagicCardRuling(BaseModel):
-    published_at: date
+    published_at: datetime.date
     source: str
     comment: str
 
@@ -266,13 +267,13 @@ class ScryfallAPI:
     def __init__(self):
         self.base_uri = "https://api.scryfall.com"
 
-        self.conn = sqlite3.connect(DB_NAME)
+        self.conn = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES)
         self.cursor = self.conn.cursor()
 
         self.cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS cards
-            (name text UNIQUE, raw_card text, image blob)
+            (name text UNIQUE, raw_card text, image blob, last_refreshed timestamp)
         """
         )
         self.conn.commit()
@@ -283,50 +284,57 @@ class ScryfallAPI:
         for name in names:
             self.cursor.execute(
                 """
-                SELECT raw_card, image FROM cards WHERE name LIKE ?
+                SELECT raw_card, image, last_refreshed FROM cards WHERE name LIKE ?
             """,
                 [name],
             )
             query_response = self.cursor.fetchone()
 
             if query_response is not None:
-                cards.append([json.loads(query_response[0]), query_response[1]])
-            else:
-                payload = {"fuzzy": name}
-                card_request = requests.get(
-                    f"{self.base_uri}/cards/named", params=payload
-                )
-                sleep(0.25)  # TODO better rate limiting
-
-                if card_request.status_code == 404:
-                    print(f"Card with name {name} not found. Skipping")
+                if (datetime.datetime.now() - query_response[2]) < datetime.timedelta(
+                    hours=REFRESH_INTERVAL
+                ):
+                    cards.append([json.loads(query_response[0]), query_response[1]])
                     continue
 
-                raw_card = card_request.json()
+            payload = {"fuzzy": name}
+            card_request = requests.get(f"{self.base_uri}/cards/named", params=payload)
+            sleep(0.25)  # TODO better rate limiting
 
-                normal_image_url = None
-                if raw_card.get("image_uris") is None:
-                    images = []
-                    for face in raw_card["card_faces"]:
-                        image_url = face["image_uris"]["normal"]
-                        image_resp = requests.get(image_url)
-                        face_image = Image.open(BytesIO(image_resp.content))
-                        images.append(face_image)
-                    image = img_to_bytearray(stitch_images_horz(images, buf_horz=10))
-                else:
-                    normal_image_url = raw_card["image_uris"]["normal"]
-                    image_request = requests.get(normal_image_url)
-                    sleep(0.25)
-                    image = bytearray(image_request.content)
+            if card_request.status_code == 404:
+                print(f"Card with name {name} not found. Skipping")
+                continue
 
-                self.cursor.execute(
-                    """
-                    INSERT OR IGNORE INTO cards VALUES (?,?,?)
-                """,
-                    [raw_card["name"], json.dumps(raw_card), image],
-                )
-                self.conn.commit()
-                cards.append((raw_card, image))
+            raw_card = card_request.json()
+
+            normal_image_url = None
+            if raw_card.get("image_uris") is None:
+                images = []
+                for face in raw_card["card_faces"]:
+                    image_url = face["image_uris"]["normal"]
+                    image_resp = requests.get(image_url)
+                    face_image = Image.open(BytesIO(image_resp.content))
+                    images.append(face_image)
+                image = img_to_bytearray(stitch_images_horz(images, buf_horz=10))
+            else:
+                normal_image_url = raw_card["image_uris"]["normal"]
+                image_request = requests.get(normal_image_url)
+                sleep(0.25)
+                image = bytearray(image_request.content)
+
+            self.cursor.execute(
+                """
+                INSERT OR REPLACE INTO cards VALUES (?,?,?,?)
+            """,
+                [
+                    raw_card["name"],
+                    json.dumps(raw_card),
+                    image,
+                    datetime.datetime.now(),
+                ],
+            )
+            self.conn.commit()
+            cards.append((raw_card, image))
 
         return cards
 
