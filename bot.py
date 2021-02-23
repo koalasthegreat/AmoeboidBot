@@ -260,7 +260,7 @@ class BotSettings:
         if result is not None:
             return result[0]
         else:
-            return DEFAULT_PREFIX
+            return DEFAULT_WRAPPING
 
 
 class ScryfallAPI:
