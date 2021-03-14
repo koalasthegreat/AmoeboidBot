@@ -465,6 +465,7 @@ async def _get_rulings(ctx, *args):
     else:
         await ctx.send(f"Card with name `{card_name}` not found.")
 
+
 @bot.command(
     name="art",
     aliases=["artwork"],
@@ -476,18 +477,18 @@ along with more info about the work, if it exists.
 )
 async def _get_art(ctx, *args):
     if len(args) < 2:
-        await ctx.send("""
+        await ctx.send(
+            """
 Not enough arguments. Usage:
 
 ```a!art [set_id] [card_name]```
 """
-)
+        )
 
     card_name = " ".join(args[1:])
     set_id = args[0].lower()
 
     card = scryfall_api.get_cards([card_name], {"set": set_id})
-
 
     if len(card) > 0:
         card_name = card[0][0]["name"]
@@ -506,7 +507,9 @@ Not enough arguments. Usage:
         else:
             await ctx.send(f"No art found for card with name `{card_name}`.")
     else:
-        await ctx.send(f"Art for card `{card_name}` from set {set_id.upper()} not found.")
+        await ctx.send(
+            f"Art for card `{card_name}` from set {set_id.upper()} not found."
+        )
 
 
 @bot.event
