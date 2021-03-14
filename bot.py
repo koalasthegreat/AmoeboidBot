@@ -21,7 +21,7 @@ TOKEN = os.getenv("TOKEN")
 DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
 DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
 DB_NAME = os.getenv("DB_NAME", default="bot.db")
-REFRESH_INTERVAL = os.getenv("REFRESH_INTERVAL", default=24)
+REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", default=24))
 
 
 def bytes_to_discfile(byte_arr, filename):
@@ -278,17 +278,20 @@ class ScryfallAPI:
         )
         self.conn.commit()
 
-    def get_cards(self, names):
+    def get_cards(self, names, params=None):
         cards = []
 
         for name in names:
-            self.cursor.execute(
-                """
-                SELECT raw_card, image, last_refreshed FROM cards WHERE name LIKE ?
-            """,
-                [name],
-            )
-            query_response = self.cursor.fetchone()
+            query_response = None
+
+            if params is None:
+                self.cursor.execute(
+                    """
+                    SELECT raw_card, image, last_refreshed FROM cards WHERE name LIKE ?
+                """,
+                    [name],
+                )
+                query_response = self.cursor.fetchone()
 
             if query_response is not None:
                 if (datetime.datetime.now() - query_response[2]) < datetime.timedelta(
@@ -298,6 +301,8 @@ class ScryfallAPI:
                     continue
 
             payload = {"fuzzy": name}
+            if params is not None:
+                payload.update(params)
             card_request = requests.get(f"{self.base_uri}/cards/named", params=payload)
             sleep(0.25)  # TODO better rate limiting
 
@@ -322,18 +327,19 @@ class ScryfallAPI:
                 sleep(0.25)
                 image = bytearray(image_request.content)
 
-            self.cursor.execute(
-                """
-                INSERT OR REPLACE INTO cards VALUES (?,?,?,?)
-            """,
-                [
-                    raw_card["name"],
-                    json.dumps(raw_card),
-                    image,
-                    datetime.datetime.now(),
-                ],
-            )
-            self.conn.commit()
+            if params is None:
+                self.cursor.execute(
+                    """
+                    INSERT OR REPLACE INTO cards VALUES (?,?,?,?)
+                """,
+                    [
+                        raw_card["name"],
+                        json.dumps(raw_card),
+                        image,
+                        datetime.datetime.now(),
+                    ],
+                )
+                self.conn.commit()
             cards.append((raw_card, image))
 
         return cards
