@@ -496,10 +496,12 @@ Not enough arguments. Usage:
         if card[0][0].get("image_uris").get("art_crop"):
             art_uri = card[0][0]["image_uris"]["art_crop"]
             artist_name = card[0][0]["artist"]
+            flavor_text = card[0][0].get("flavor_text")
 
             embed = discord.Embed(type="rich")
             embed.title = card_name + f" ({set_id.upper()})"
             embed.set_image(url=art_uri)
+            embed.description = f"*{flavor_text}*" if flavor_text else None
             embed.set_footer(text=f"{artist_name} — ™ and © Wizards of the Coast")
 
             await ctx.send(embed=embed)
@@ -508,7 +510,7 @@ Not enough arguments. Usage:
             await ctx.send(f"No art found for card with name `{card_name}`.")
     else:
         await ctx.send(
-            f"Art for card `{card_name}` from set {set_id.upper()} not found."
+            f"Art for card `{card_name}` from set `{set_id.upper()}` not found."
         )
 
 
