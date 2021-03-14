@@ -465,6 +465,49 @@ async def _get_rulings(ctx, *args):
     else:
         await ctx.send(f"Card with name `{card_name}` not found.")
 
+@bot.command(
+    name="art",
+    aliases=["artwork"],
+    brief="Shows artwork for a card from a given set (if it exists)",
+    description="""
+Looks up card artwork from the specified set, and sends the cropped art
+along with more info about the work, if it exists.
+""",
+)
+async def _get_art(ctx, *args):
+    if len(args) < 2:
+        await ctx.send("""
+Not enough arguments. Usage:
+
+```a!art [set_id] [card_name]```
+"""
+)
+
+    card_name = " ".join(args[1:])
+    set_id = args[0].lower()
+
+    card = scryfall_api.get_cards([card_name], {"set": set_id})
+
+
+    if len(card) > 0:
+        card_name = card[0][0]["name"]
+
+        if card[0][0].get("image_uris").get("art_crop"):
+            art_uri = card[0][0]["image_uris"]["art_crop"]
+            artist_name = card[0][0]["artist"]
+
+            embed = discord.Embed(type="rich")
+            embed.title = card_name + f" ({set_id.upper()})"
+            embed.set_image(url=art_uri)
+            embed.set_footer(text=f"{artist_name} — ™ and © Wizards of the Coast")
+
+            await ctx.send(embed=embed)
+
+        else:
+            await ctx.send(f"No art found for card with name `{card_name}`.")
+    else:
+        await ctx.send(f"Art for card `{card_name}` from set {set_id.upper()} not found.")
+
 
 @bot.event
 async def on_ready():
