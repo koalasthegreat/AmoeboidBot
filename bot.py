@@ -98,7 +98,7 @@ class MagicCard(BaseModel):
             else:
                 formatted_string += f"({cost_symbol})"
 
-        return f"**{formatted_string}**"
+        return f"**{formatted_string}**" if formatted_string != "" else ""
 
     def format_color_identity(color):
         color_map = {
