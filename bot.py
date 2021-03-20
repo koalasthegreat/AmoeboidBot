@@ -377,14 +377,14 @@ Only usable by server administrators.
 """,
 )
 @commands.has_permissions(administrator=True)
-async def _change_prefix(ctx, arg=None):
-    if arg is None:
+async def _change_prefix(ctx, prefix=None):
+    if prefix is None:
         prefix = bot_settings.get_prefix(ctx.message.guild.id)
         await ctx.send(f"The bot's prefix for this server is currently `{prefix}`.")
 
     else:
-        bot_settings.set_prefix(ctx.message.guild.id, arg)
-        await ctx.send(f"Bot prefix changed to `{arg}`.")
+        bot_settings.set_prefix(ctx.message.guild.id, prefix)
+        await ctx.send(f"Bot prefix changed to `{prefix}`.")
 
 
 @bot.command(
@@ -397,17 +397,17 @@ being run in. Only usable by server administrators.
 """,
 )
 @commands.has_permissions(administrator=True)
-async def _change_wrapping(ctx, arg=None):
-    if arg is None:
+async def _change_wrapping(ctx, wrapping=None):
+    if wrapping is None:
         wrapping = bot_settings.get_wrapping(ctx.message.guild.id)
         await ctx.send(f"The bot's wrapping for this server is currently `{wrapping}`.")
 
     else:
         regex = r"([^\s\*]+\*[^\s\*]+)"
 
-        if re.match(regex, arg):
-            bot_settings.set_wrapping(ctx.message.guild.id, arg)
-            await ctx.send(f"Bot wrapping changed to `{arg}`.")
+        if re.match(regex, wrapping):
+            bot_settings.set_wrapping(ctx.message.guild.id, wrapping)
+            await ctx.send(f"Bot wrapping changed to `{wrapping}`.")
 
         else:
             await ctx.send(
@@ -424,8 +424,11 @@ Looks up and displays the rulings for the given card. Will sort
 them into rulings from both WOTC and Scryfall.
 """,
 )
-async def _get_rulings(ctx, *args):
-    card_name = " ".join(args)
+async def _get_rulings(ctx, *card_name):
+    if len(card_name) < 1:
+        raise commands.MissingRequiredArgument(_get_rulings.params["card_name"])
+
+    card_name = " ".join(card_name)
 
     card = scryfall_api.get_cards([card_name])
     sleep(0.25)  # TODO: better ratelimiting
@@ -477,23 +480,17 @@ Looks up card artwork from the specified set, and sends the cropped art
 along with more info about the work, if it exists.
 """,
 )
-async def _get_art(ctx, *args):
-    if len(args) < 2:
-        await ctx.send(
-            """
-Not enough arguments. Usage:
+async def _get_art(ctx, set, *card_name):
+    if len(card_name) < 1:
+        raise commands.MissingRequiredArgument(_get_art.params["card_name"])
 
-```a!art [set_id] [card_name]```
-"""
-        )
-
-    card_name = " ".join(args[1:])
-    set_id = args[0].lower()
+    card_name = " ".join(card_name)
+    set_id = set.lower()
 
     card = scryfall_api.get_cards([card_name], {"set": set_id})
 
     if len(card) > 0:
-        card_name = card[0][0]["name"]
+        name = card[0][0]["name"]
 
         if card[0][0].get("image_uris").get("art_crop"):
             art_uri = card[0][0]["image_uris"]["art_crop"]
@@ -501,7 +498,7 @@ Not enough arguments. Usage:
             flavor_text = card[0][0].get("flavor_text")
 
             embed = discord.Embed(type="rich")
-            embed.title = card_name + f" ({set_id.upper()})"
+            embed.title = name + f" ({set_id.upper()})"
             embed.set_image(url=art_uri)
             embed.description = f"*{flavor_text}*" if flavor_text else None
             embed.set_footer(text=f"{artist_name} — ™ and © Wizards of the Coast")
@@ -509,11 +506,9 @@ Not enough arguments. Usage:
             await ctx.send(embed=embed)
 
         else:
-            await ctx.send(f"No art found for card with name `{card_name}`.")
+            await ctx.send(f"No art found for card with name `{name}`.")
     else:
-        await ctx.send(
-            f"Art for card `{card_name}` from set `{set_id.upper()}` not found."
-        )
+        await ctx.send(f"Art for card `{name}` from set `{set_id.upper()}` not found.")
 
 
 @bot.event
@@ -731,6 +726,20 @@ async def on_message(message):
             f"Retrieved {len(cards)} cards. Call a single card for more details.",
             file=parsed_image_file,
         )
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send(
+            f"You do not have permission to run the command `{ctx.command}`."
+        )
+    elif isinstance(error, commands.CommandNotFound):
+        await ctx.send(f"`{ctx.command}` is not a valid command.")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"Missing required argument `{error.param}`.")
+    else:
+        raise error
 
 
 bot.run(TOKEN)
