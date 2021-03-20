@@ -67,6 +67,8 @@ def stitch_images_vert(images, buf_horz=0, buf_vert=0, bgcolor=(255, 255, 255)):
 
 
 def get_prefix(client, message):
+    if not message.guild:
+        return DEFAULT_PREFIX
     return bot_settings.get_prefix(message.guild.id)
 
 
@@ -521,14 +523,24 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if (
-        message.author.bot
-        or bot_settings.get_prefix(message.guild.id) in message.content
-    ):
-        await bot.process_commands(message)
+    if message.author == bot.user or message.author.bot:
         return
 
-    left_split, right_split = bot_settings.get_wrapping(message.guild.id).split("*")
+    wrapping = None
+
+    if not message.guild:
+        if DEFAULT_PREFIX in message.content:
+            await bot.process_commands(message)
+            return
+        wrapping = DEFAULT_WRAPPING
+
+    else:
+        if bot_settings.get_prefix(message.guild.id) in message.content:
+            await bot.process_commands(message)
+            return
+        wrapping = bot_settings.get_wrapping(message.guild.id)
+
+    left_split, right_split = wrapping.split("*")
 
     if left_split and right_split not in message.content:
         return
