@@ -280,18 +280,19 @@ class ScryfallAPI:
         )
         self.conn.commit()
 
-    def get_cards(self, names, params=None):
+    def get_cards(self, queries):
         cards = []
+        accepted_params = ["set"]
 
-        for name in names:
+        for query in queries:
             query_response = None
 
-            if params is None:
+            if not query.get("params"):
                 self.cursor.execute(
                     """
                     SELECT raw_card, image, last_refreshed FROM cards WHERE name LIKE ?
                 """,
-                    [name],
+                    [query["card_name"]],
                 )
                 query_response = self.cursor.fetchone()
 
@@ -302,14 +303,18 @@ class ScryfallAPI:
                     cards.append([json.loads(query_response[0]), query_response[1]])
                     continue
 
-            payload = {"fuzzy": name}
-            if params is not None:
-                payload.update(params)
+            payload = {"fuzzy": query["card_name"]}
+            if query.get("params"):
+                for param in query["params"]:
+                    for key in param:
+                        if key in accepted_params:
+                            payload[key] = param[key]
+
             card_request = requests.get(f"{self.base_uri}/cards/named", params=payload)
             sleep(0.25)  # TODO better rate limiting
 
             if card_request.status_code == 404:
-                print(f"Card with name {name} not found. Skipping")
+                print(f"Card with name {query['card_name']} not found. Skipping")
                 continue
 
             raw_card = card_request.json()
@@ -329,7 +334,7 @@ class ScryfallAPI:
                 sleep(0.25)
                 image = bytearray(image_request.content)
 
-            if params is None:
+            if not query.get("params"):
                 self.cursor.execute(
                     """
                     INSERT OR REPLACE INTO cards VALUES (?,?,?,?)
@@ -430,7 +435,7 @@ async def _get_rulings(ctx, *card_name):
 
     card_name = " ".join(card_name)
 
-    card = scryfall_api.get_cards([card_name])
+    card = scryfall_api.get_cards([{"card_name": card_name}])
     sleep(0.25)  # TODO: better ratelimiting
 
     if len(card) > 0 and card[0][0].get("rulings_uri"):
@@ -487,7 +492,14 @@ async def _get_art(ctx, set, *card_name):
     card_name = " ".join(card_name)
     set_id = set.lower()
 
-    card = scryfall_api.get_cards([card_name], {"set": set_id})
+    card = scryfall_api.get_cards(
+        [
+            {
+                "card_name": card_name,
+                "set": set_id,
+            }
+        ]
+    )
 
     if len(card) > 0:
         name = card[0][0]["name"]
@@ -541,13 +553,37 @@ async def on_message(message):
         return
 
     regex = rf"{re.escape(left_split)}(.*?){re.escape(right_split)}"
-    card_names = re.findall(regex, message.content)
+    raw_queries = re.findall(regex, message.content)
 
-    if len(card_names) > 10:
+    if len(raw_queries) > 10:
         await message.channel.send("Please request 10 or less cards at a time.")
         return
 
-    raw_cards = scryfall_api.get_cards(card_names)
+    queries = []
+
+    for query in raw_queries:
+        query = query.split(";")
+
+        if len(query) == 1:
+            query = {"card_name": query[0]}
+            queries.append(query)
+        else:
+            params = query[1:]
+            query = {
+                "card_name": query[0],
+                "params": [],
+            }
+
+            try:
+                for param in params:
+                    param = param.split("=")
+                    query["params"].append({param[0].strip(" "): param[1].strip(" ")})
+                queries.append(query)
+            except:
+                await message.channel.send("Invalid formatting of parameters.")
+                return
+
+    raw_cards = scryfall_api.get_cards(queries)
     cards = []
 
     for raw_card, image in raw_cards:
