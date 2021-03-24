@@ -1,0 +1,7 @@
+services:
+  amoeboidbot:
+    image: amoeboidbot
+    env_file:
+      - ./.env
+    volumes:
+      - ./volumes/amoeboidbot:/app/data

@@ -20,7 +20,7 @@ load_dotenv()
 TOKEN = os.getenv("TOKEN")
 DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
 DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
-DB_NAME = os.getenv("DB_NAME", default="bot.db")
+DB_DIR = os.getenv("DB_DIR", default="./data/bot.db")
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", default=24))
 
 
@@ -189,7 +189,7 @@ class MagicCardRuling(BaseModel):
 
 class BotSettings:
     def __init__(self):
-        self.conn = sqlite3.connect(DB_NAME)
+        self.conn = sqlite3.connect(DB_DIR)
         self.cursor = self.conn.cursor()
 
         self.cursor.execute(
@@ -269,7 +269,7 @@ class ScryfallAPI:
     def __init__(self):
         self.base_uri = "https://api.scryfall.com"
 
-        self.conn = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES)
+        self.conn = sqlite3.connect(DB_DIR, detect_types=sqlite3.PARSE_DECLTYPES)
         self.cursor = self.conn.cursor()
 
         self.cursor.execute(
