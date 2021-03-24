@@ -20,7 +20,7 @@ load_dotenv()
 TOKEN = os.getenv("TOKEN")
 DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
 DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
-DB_DIR = os.getenv("DB_DIR", default="./data/bot.db")
+DB_DIR = os.getenv("DB_DIR", default="/app/data/bot.db")
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", default=24))
 
 

@@ -4,4 +4,6 @@ services:
     env_file:
       - ./.env
     volumes:
-      - ./volumes/amoeboidbot:/app/data
+      - amoeboidbot:/app/data
+volumes:
+  amoeboidbot:
