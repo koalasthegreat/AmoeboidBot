@@ -73,19 +73,79 @@ def get_prefix(client, message):
 
 
 class MagicCard(BaseModel):
-    name: str
-    color_identity: Tuple[Any, ...]
-    normal_image_url: str
-    normal_image_bytes: bytes
-    oracle_text: Optional[str]
+    id: int
+    artist: Optional[str]
+    ascii_name: Optional[str]
+    availability: Optional[List[str]]
+    borderColor: Optional[str]
+    card_kingdom_foil_id: Optional[str]
+    card_kingdom_id: Optional[str]
+    color_identity: Optional[List[str]]
+    color_indicator: Optional[List[str]]
+    colors: Optional[List[str]]
+    converted_mana_cost: Optional[float]
+    duel_deck: Optional[str]
+    edhrec_rank: Optional[int]
+    face_converted_mana_cost: Optional[float]
+    face_name: Optional[str]
+    flavor_name: Optional[str]
     flavor_text: Optional[str]
-    scryfall_uri: str
-    color_string: Optional[str]
-    type_line: Optional[str]
-    power: Optional[str]
-    toughness: Optional[str]
+    frame_effects: Optional[str]
+    frame_version: Optional[str]
+    hand: Optional[str]
+    has_alternative_deck_limit: Optional[int]
+    has_content_warning: Optional[int]
+    has_foil: Optional[int]
+    has_non_foil: Optional[int]
+    is_alternative: Optional[int]
+    is_full_art: Optional[int]
+    is_online_only: Optional[int]
+    is_oversized: Optional[int]
+    is_promo: Optional[int]
+    is_reprOptional: Optional[int]
+    is_reserved: Optional[int]
+    is_starter: Optional[int]
+    is_story_spotlight: Optional[int]
+    is_textless: Optional[int]
+    is_timeshifted: Optional[int]
+    keywords: Optional[List[str]]
+    layout: Optional[str]
+    leadership_skills: Optional[Dict[str, bool]]
+    life: Optional[str]
     loyalty: Optional[str]
-    prices: Optional[Dict[str, Any]]
+    mana_cost: Optional[str]
+    mcm_id: Optional[str]
+    mcm_meta_id: Optional[str]
+    mtg_arena_id: Optional[str]
+    mtgjson_v4_id: Optional[str]
+    mtgo_foil_id: Optional[str]
+    mtgo_id: Optional[str]
+    multiverse_id: Optional[str]
+    name: Optional[str]
+    number: Optional[str]
+    original_release_date: Optional[datetime.date]
+    original_text: Optional[str]
+    original_type: Optional[str]
+    other_face_ids: Optional[List[str]]
+    power: Optional[str]
+    printings: Optional[List[str]]
+    promo_types: Optional[List[str]]
+    purchase_urls: Optional[Dict[str, str]]
+    rarity: Optional[str]
+    scryfall_id: Optional[str]
+    scryfall_illustration_id: Optional[str]
+    scryfall_oracle_id: Optional[str]
+    set_code: Optional[str]
+    side: Optional[str]
+    subtypes: Optional[List[str]]
+    supertypes: Optional[List[str]]
+    tcgplayer_product_id: Optional[str]
+    text: Optional[str]
+    toughness: Optional[str]
+    types: Optional[List[str]]
+    uuid: str
+    variations: Optional[List[str]]
+    watermark: Optional[str]
 
     def format_color_string(cost):
         c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "🟣", "W": "⚪", "C": "⟡"}
@@ -269,46 +329,12 @@ class ScryfallAPI:
     def __init__(self):
         self.base_uri = "https://api.scryfall.com"
 
-        self.conn = sqlite3.connect(DB_NAME, detect_types=sqlite3.PARSE_DECLTYPES)
-        self.cursor = self.conn.cursor()
-
-        self.cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS cards
-            (name text UNIQUE, raw_card text, image blob, last_refreshed timestamp)
-        """
-        )
-        self.conn.commit()
-
+    # deprecated
     def get_cards(self, queries):
         cards = []
-        accepted_params = ["set"]
 
         for query in queries:
-            query_response = None
-
-            if not query.get("params"):
-                self.cursor.execute(
-                    """
-                    SELECT raw_card, image, last_refreshed FROM cards WHERE name LIKE ?
-                """,
-                    [query["card_name"]],
-                )
-                query_response = self.cursor.fetchone()
-
-            if query_response is not None:
-                if (datetime.datetime.now() - query_response[2]) < datetime.timedelta(
-                    hours=REFRESH_INTERVAL
-                ):
-                    cards.append([json.loads(query_response[0]), query_response[1]])
-                    continue
-
             payload = {"fuzzy": query["card_name"]}
-            if query.get("params"):
-                for param in query["params"]:
-                    for key in param:
-                        if key in accepted_params:
-                            payload[key] = param[key]
 
             card_request = requests.get(f"{self.base_uri}/cards/named", params=payload)
             sleep(0.25)  # TODO better rate limiting
@@ -367,10 +393,34 @@ class ScryfallAPI:
             return []
 
 
+class CardDB:
+    def __init__(self):
+        self.conn = sqlite3.connect("AllPrintings.sqlite")
+        self.cursor = self.conn.cursor()
+
+    def get_cards(queries):
+        for query in queries:
+            name = query[0]
+            params = query[1]
+
+            if params is None:
+                carddb.cursor.execute(
+                    """
+                    SELECT * FROM cards WHERE name=?
+                """,
+                (name),
+            )
+            return [carddb.cursor.fetchone()]
+            # else:
+            #     carddb.
+
+
+
 bot_settings = BotSettings()
+scryfall_api = ScryfallAPI()
+carddb = CardDB()
 bot = commands.Bot(command_prefix=get_prefix)
 
-scryfall_api = ScryfallAPI()
 
 
 @bot.command(
@@ -419,7 +469,7 @@ async def _change_wrapping(ctx, wrapping=None):
                 "Bot wrapping is not valid. Wrap a \* in characters, like this: `[[*]]`"
             )
 
-
+# TODO: Refactor to use DB
 @bot.command(
     name="rulings",
     aliases=["rule", "ruling"],
@@ -475,7 +525,7 @@ async def _get_rulings(ctx, *card_name):
     else:
         await ctx.send(f"Card with name `{card_name}` not found.")
 
-
+# TODO: refactor to use local db to get illustration from api
 @bot.command(
     name="art",
     aliases=["artwork"],
@@ -520,7 +570,7 @@ async def _get_art(ctx, set, *card_name):
         else:
             await ctx.send(f"No art found for card with name `{name}`.")
     else:
-        await ctx.send(f"Art for card `{name}` from set `{set_id.upper()}` not found.")
+        await ctx.send(f"Art for card `{card_name}` from set `{set_id.upper()}` not found.")
 
 
 @bot.event
