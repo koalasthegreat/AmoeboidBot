@@ -12,7 +12,7 @@ import sqlite3
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, BaseSettings, validator
 from PIL import Image
 
 
@@ -110,7 +110,7 @@ class MagicCard(BaseModel):
     is_timeshifted: Optional[int]
     keywords: Optional[List[str]]
     layout: Optional[str]
-    leadership_skills: Optional[Dict[str, bool]]
+    leadership_skills: Optional[Dict[str, str]]
     life: Optional[str]
     loyalty: Optional[str]
     mana_cost: Optional[str]
@@ -146,6 +146,20 @@ class MagicCard(BaseModel):
     uuid: str
     variations: Optional[List[str]]
     watermark: Optional[str]
+
+    @validator('availability', 'color_identity', 'color_indicator', 'colors', 'keywords', 'other_face_ids', 'printings',
+    'promo_types', 'subtypes', 'supertypes', 'types', 'variations', pre=True)
+    def parse_list_string(cls, val):
+        if val is not None:
+            return val.split(",")
+        return val
+
+    @validator('leadership_skills', 'purchase_urls', pre=True)
+    def parse_dicts(cls, val):
+        if val is not None:
+            return dict(val)
+        return val
+
 
     def format_color_string(cost):
         c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "🟣", "W": "⚪", "C": "⟡"}
@@ -396,23 +410,29 @@ class ScryfallAPI:
 class CardDB:
     def __init__(self):
         self.conn = sqlite3.connect("AllPrintings.sqlite")
+        self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
 
-    def get_cards(queries):
-        for query in queries:
-            name = query[0]
-            params = query[1]
+    def get_cards(self, queries):
+        cards = []
 
-            if params is None:
+        for query in queries:
+            name = query["card_name"]
+
+            if query.get("params") is None:
                 carddb.cursor.execute(
                     """
                     SELECT * FROM cards WHERE name=?
                 """,
-                (name),
+                (name,),
             )
-            return [carddb.cursor.fetchone()]
+            card = MagicCard(**dict(carddb.cursor.fetchone()))
+
+            print(card)
             # else:
             #     carddb.
+
+        return cards
 
 
 
@@ -633,7 +653,7 @@ async def on_message(message):
                 await message.channel.send("Invalid formatting of parameters.")
                 return
 
-    raw_cards = scryfall_api.get_cards(queries)
+    raw_cards = carddb.get_cards(queries)
     cards = []
 
     for raw_card, image in raw_cards:
