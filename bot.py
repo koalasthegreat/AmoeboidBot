@@ -447,8 +447,17 @@ class TCGPlayerAPI:
 class CardDB:
     def __init__(self):
         self.conn = sqlite3.connect("AllPrintings.sqlite")
+        self.conn.enable_load_extension(True)
         self.conn.row_factory = sqlite3.Row
+        self.conn.load_extension('./spellfix')
         self.cursor = self.conn.cursor()
+
+        self.init_virtual_table()
+
+
+    def init_virtual_table(self):
+        self.cursor.execute("CREATE VIRTUAL TABLE IF NOT EXISTS search USING spellfix1")
+        self.cursor.execute("INSERT OR IGNORE INTO search(word) SELECT name FROM cards")
 
     def get_cards(self, queries):
         cards = []
@@ -459,9 +468,18 @@ class CardDB:
             if query.get("params") is None:
                 carddb.cursor.execute(
                     """
-                    SELECT * FROM cards WHERE name=?
+                    SELECT word FROM search WHERE word MATCH ?
                 """,
                 (name,),
+                )
+
+                guess = carddb.cursor.fetchone()['word']
+
+                carddb.cursor.execute(
+                    """
+                    SELECT * FROM cards WHERE name=?
+                """,
+                (guess,),
                 )
                 cards.append(MagicCard(**carddb.cursor.fetchone()))
 
