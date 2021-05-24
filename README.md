@@ -10,4 +10,6 @@ When a card name is wrapped in square brackets, the bot will reply with data abo
 - `wrapping <arg=None>:`: If given an argument, changes the wrapping for detecting cards in the server it was run. Otherwise, shows the current wrapping. Usable only by administrators.
 
 ## Setup
-Copy `.env.dist` to a file called `.env`, and fill out the given fields. Then, run your bot with `python bot.py`.
+You will need a compiled [spellfix](https://www.sqlite.org/spellfix1.html) version in the root directory of the project to run this bot.
+
+As well, copy `.env.dist` to a file called `.env`, and fill out the given fields, including your Discord bot token, and TCGPlayer API tokens. Then, run the bot with `python bot.py`.
