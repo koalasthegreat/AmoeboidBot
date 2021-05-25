@@ -157,8 +157,22 @@ class MagicCard(BaseModel):
         alias_generator = camel_case
         allow_population_by_field_name = True
 
-    @validator('availability', 'color_identity', 'color_indicator', 'colors', 'frame_effects', 'keywords', 'other_face_ids', 'printings',
-    'promo_types', 'subtypes', 'supertypes', 'types', 'variations', pre=True)
+    @validator(
+        "availability",
+        "color_identity",
+        "color_indicator",
+        "colors",
+        "frame_effects",
+        "keywords",
+        "other_face_ids",
+        "printings",
+        "promo_types",
+        "subtypes",
+        "supertypes",
+        "types",
+        "variations",
+        pre=True,
+    )
     def parse_list_string(cls, val):
         if val is not None:
             if "," in val:
@@ -166,12 +180,11 @@ class MagicCard(BaseModel):
             return [val]
         return None
 
-    @validator('leadership_skills', 'purchase_urls', pre=True)
+    @validator("leadership_skills", "purchase_urls", pre=True)
     def parse_dicts(cls, val):
         if val is not None:
             return ast.literal_eval(val)
         return None
-
 
     def format_color_string(cost):
         c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "🟣", "W": "⚪", "C": "⟡"}
@@ -249,7 +262,9 @@ class MagicCard(BaseModel):
         embed.colour = discord.Color.from_rgb(r, g, b)
 
         if card.colors is not None:
-            embed.add_field(name="Cost:", value=MagicCard.format_color_string(card.mana_cost))
+            embed.add_field(
+                name="Cost:", value=MagicCard.format_color_string(card.mana_cost)
+            )
 
         if card.types is not None:
             embed.add_field(name="Type:", value=" ".join(card.types))
@@ -408,8 +423,10 @@ class ScryfallAPI:
 
         return cards
 
-    def get_rulings(self, rulings_uri):
-        ruling_request = requests.get(rulings_uri)
+    def get_rulings(self, scryfall_card_id):
+        ruling_request = requests.get(
+            f"{self.base_uri}/cards/{scryfall_card_id}/rulings"
+        )
 
         if ruling_request.status_code == 200:
             raw_rulings = ruling_request.json()
@@ -422,19 +439,34 @@ class ScryfallAPI:
 
         else:
             return []
-    
-    def get_image(self, scryfall_card_id):
-        pass
 
-    def get_image_url(self, scryfall_card_id):
-        payload = {"format": "image", "version": "normal"}
+    def get_image(self, scryfall_card_id, version="normal"):
+        payload = {"format": "image", "version": version}
 
-        image_request = requests.get(f"{self.base_uri}/cards/{scryfall_card_id}", params=payload)
+        image_request = requests.get(
+            f"{self.base_uri}/cards/{scryfall_card_id}", params=payload
+        )
+
+        if image_request.status_code == 404:
+            return None
+
+        stream = BytesIO(image_request.content)
+        image = Image.open(stream)
+
+        return image
+
+    def get_image_url(self, scryfall_card_id, version="normal"):
+        payload = {"format": "image", "version": version}
+
+        image_request = requests.get(
+            f"{self.base_uri}/cards/{scryfall_card_id}", params=payload
+        )
 
         if image_request.status_code == 404:
             return None
 
         return image_request.url
+
 
 class TCGPlayerAPI:
     def __init__(self):
@@ -449,11 +481,10 @@ class CardDB:
         self.conn = sqlite3.connect("AllPrintings.sqlite")
         self.conn.enable_load_extension(True)
         self.conn.row_factory = sqlite3.Row
-        self.conn.load_extension('./spellfix')
+        self.conn.load_extension("./spellfix")
         self.cursor = self.conn.cursor()
 
         self.init_virtual_table()
-
 
     def init_virtual_table(self):
         self.cursor.execute("CREATE VIRTUAL TABLE IF NOT EXISTS search USING spellfix1")
@@ -470,16 +501,16 @@ class CardDB:
                     """
                     SELECT word FROM search WHERE word MATCH ?
                 """,
-                (name,),
+                    (name,),
                 )
 
-                guess = carddb.cursor.fetchone()['word']
+                guess = carddb.cursor.fetchone()["word"]
 
                 carddb.cursor.execute(
                     """
                     SELECT * FROM cards WHERE name=?
                 """,
-                (guess,),
+                    (guess,),
                 )
                 cards.append(MagicCard(**carddb.cursor.fetchone()))
 
@@ -489,12 +520,10 @@ class CardDB:
         return cards
 
 
-
 bot_settings = BotSettings()
 scryfall_api = ScryfallAPI()
 carddb = CardDB()
 bot = commands.Bot(command_prefix=get_prefix)
-
 
 
 @bot.command(
@@ -543,7 +572,7 @@ async def _change_wrapping(ctx, wrapping=None):
                 "Bot wrapping is not valid. Wrap a \* in characters, like this: `[[*]]`"
             )
 
-# TODO: Refactor to use DB
+
 @bot.command(
     name="rulings",
     aliases=["rule", "ruling"],
@@ -559,21 +588,22 @@ async def _get_rulings(ctx, *card_name):
 
     card_name = " ".join(card_name)
 
-    card = scryfall_api.get_cards([{"card_name": card_name}])
+    cards = carddb.get_cards([{"card_name": card_name}])
     sleep(0.25)  # TODO: better ratelimiting
 
-    if len(card) > 0 and card[0][0].get("rulings_uri"):
-        card_name = card[0][0]["name"]
-        rulings = scryfall_api.get_rulings(card[0][0]["rulings_uri"])
+    if len(cards) > 0:
+        card = cards[0]
+
+        rulings = scryfall_api.get_rulings(card.scryfall_id)
 
         if len(rulings) == 0:
-            await ctx.send(f"Could not find rulings for `{card_name}`.")
+            await ctx.send(f"Could not find rulings for `{card.name}`.")
             return
 
         rulings = [ruling for ruling in rulings if ruling.source == "wotc"]
 
         embed = discord.Embed(type="rich")
-        embed.title = "Rulings for " + card_name
+        embed.title = f"Rulings for {card.name}"
 
         description = ""
 
@@ -590,8 +620,7 @@ async def _get_rulings(ctx, *card_name):
 
         if len(description) > 2048:
             embed.description = (
-                embed.description[:1900]
-                + f"...\n\n[View Full Rulings on Scryfall]({card[0][0]['scryfall_uri']})"
+                embed.description[:1900] + f"...\n\n[View Full Rulings on Scryfall]()"
             )
 
         await ctx.send(embed=embed)
@@ -599,52 +628,52 @@ async def _get_rulings(ctx, *card_name):
     else:
         await ctx.send(f"Card with name `{card_name}` not found.")
 
-# TODO: refactor to use local db to get illustration from api
+
 @bot.command(
     name="art",
     aliases=["artwork"],
-    brief="Shows artwork for a card from a given set (if it exists)",
+    brief="Shows artwork for the specified card",
     description="""
-Looks up card artwork from the specified set, and sends the cropped art
+Looks up card artwork from the specified card, and sends the cropped art
 along with more info about the work, if it exists.
 """,
 )
-async def _get_art(ctx, set, *card_name):
-    if len(card_name) < 1:
-        raise commands.MissingRequiredArgument(_get_art.params["card_name"])
-
+async def _get_art(ctx, *card_name):
     card_name = " ".join(card_name)
-    set_id = set.lower()
+    params = None
 
-    card = scryfall_api.get_cards(
-        [
-            {
-                "card_name": card_name,
-                "set": set_id,
-            }
-        ]
-    )
+    if ";" in card_name:
+        try:
+            card_name, params = card_name.split(";")
+            if "," in params:
+                params = params.split(",")
+            else:
+                params = [params]
+        except:
+            await ctx.send("Invalid formatting of parameters.")
+            return
 
-    if len(card) > 0:
-        name = card[0][0]["name"]
-
-        if card[0][0].get("image_uris").get("art_crop"):
-            art_uri = card[0][0]["image_uris"]["art_crop"]
-            artist_name = card[0][0]["artist"]
-            flavor_text = card[0][0].get("flavor_text")
-
-            embed = discord.Embed(type="rich")
-            embed.title = name + f" ({set_id.upper()})"
-            embed.set_image(url=art_uri)
-            embed.description = f"*{flavor_text}*" if flavor_text else None
-            embed.set_footer(text=f"{artist_name} — ™ and © Wizards of the Coast")
-
-            await ctx.send(embed=embed)
-
-        else:
-            await ctx.send(f"No art found for card with name `{name}`.")
+    if params is None:
+        cards = carddb.get_cards([{"card_name": card_name}])
     else:
-        await ctx.send(f"Art for card `{card_name}` from set `{set_id.upper()}` not found.")
+        cards = carddb.get_cards([{"card_name": card_name, "params": params}])
+
+    if len(cards) > 0:
+        card = cards[0]
+
+        image_url = scryfall_api.get_image_url(card.scryfall_id, version="art")
+
+        embed = discord.Embed(type="rich")
+        embed.title = f"{card.name} ({card.set_code.upper()})"
+        embed.set_image(url=image_url)
+        embed.description = f"*{card.flavor_text}*" if card.flavor_text else None
+        embed.set_footer(text=f"{card.artist} — ™ and © Wizards of the Coast")
+
+        await ctx.send(embed=embed)
+
+    else:
+        await ctx.send(f"Art for card `{card_name}` not found.")
+        return
 
 
 @bot.event
@@ -723,8 +752,7 @@ async def on_message(message):
         images = []
 
         for card in cards:
-            stream = BytesIO(card.normal_image_bytes)
-            image = Image.open(stream)
+            image = scryfall_api.get_image(card.scryfall_id)
             images.append(image)
 
         # Note/cmdr0 - Should be able to use stitch_images with some business
