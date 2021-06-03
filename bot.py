@@ -20,7 +20,9 @@ from PIL import Image
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv("AMOEBOID_DISCORD_TOKEN")
-TCGPLAYER_TOKEN = os.getenv("AMOEBOID_TCGPLAYER_TOKEN")
+TCG_PUBLIC_KEY = os.getenv("AMOEBOID_TCG_PUBLIC_KEY")
+TCG_PRIVATE_KEY = os.getenv("AMOEBOID_TCG_PRIVATE_KEY")
+TCG_USERAGENT = os.getenv("AMOEBOID_TCG_USER_AGENT")
 DEFAULT_PREFIX = os.getenv("AMOEBOID_DEFAULT_PREFIX", default="a!")
 DEFAULT_WRAPPING = os.getenv("AMOEBOID_DEFAULT_WRAPPING", default="[[*]]")
 DB_NAME = os.getenv("AMOEBOID_DB_NAME", default="bot.db")
@@ -211,7 +213,7 @@ class MagicCard(BaseModel):
             "C": (100, 101, 102),
         }
 
-        if len(color) == 0:
+        if color is None:
             return (100, 101, 102)
 
         if len(color) == 1:
@@ -221,22 +223,6 @@ class MagicCard(BaseModel):
 
         else:
             return (207, 181, 59)
-
-    def format_prices(prices):
-        price_string = ""
-        usd = prices.get("usd")
-        usd_foil = prices.get("usd_foil")
-
-        if usd:
-            price_string += "Normal: " + (prices.get("usd") or "N/A") + " USD\n"
-        else:
-            price_string += "Normal: N/A\n"
-        if usd_foil:
-            price_string += "Foil: " + (prices.get("usd_foil") or "N/A") + " USD"
-        else:
-            price_string += "Foil: N/A"
-
-        return price_string
 
     def generate_embed(card):
         embed = discord.Embed(type="rich")
@@ -280,9 +266,32 @@ class MagicCard(BaseModel):
         if image_url is not None:
             embed.set_image(url=image_url)
 
-        # if card.prices is not None:
-        #     price_string = MagicCard.format_prices(card.prices)
-        #     embed.add_field(name="Prices:", value=price_string)
+        prices = tcgplayer_api.get_prices(card.tcgplayer_product_id)
+
+        if prices is not None:
+            price_string = ""
+
+            for obj in prices:
+                if not (obj["marketPrice"] or obj["highPrice"] or obj["lowPrice"]):
+                    continue
+
+                price_string += f"*{obj['subTypeName']}*\n"
+                price_string += (
+                    f"Market: ${obj['marketPrice']} USD\n" if obj["marketPrice"] else ""
+                )
+                price_string += (
+                    f"High: ${obj['highPrice']} USD\n" if obj["highPrice"] else ""
+                )
+                price_string += (
+                    f"Low: ${obj['lowPrice']} USD\n" if obj["lowPrice"] else ""
+                )
+                price_string += "\n"
+
+            embed.add_field(name="Prices:", value=price_string)
+
+        embed.set_footer(
+            text="Prices provided by TCGplayer. This bot uses TCGplayer data but is not endorsed by TCGplayer."
+        )
 
         return embed
 
@@ -471,9 +480,62 @@ class ScryfallAPI:
 class TCGPlayerAPI:
     def __init__(self):
         self.base_uri = "https://api.tcgplayer.com"
+        self.bearer_token = None
+        self.bearer_token_expire = None
+
+        self.bearer_token, self.bearer_token_expire = self.get_bearer_token()
+
+    def get_bearer_token(self):
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+        params = {
+            "grant_type": "client_credentials",
+            "client_id": TCG_PUBLIC_KEY,
+            "client_secret": TCG_PRIVATE_KEY,
+        }
+
+        request = requests.post(f"{self.base_uri}/token", headers=headers, data=params)
+
+        # TODO: update with proper handling
+        if request.status_code != 200:
+            print("Could not properly authenticate.")
+            return
+
+        response = request.json()
+
+        return (
+            response["access_token"],
+            datetime.datetime.strptime(
+                response[".expires"], "%a, %d %b %Y %H:%M:%S %Z"
+            ),
+        )
+
+    def check_bearer_token(self):
+        if datetime.datetime.now() > self.bearer_token_expire:
+            self.bearer_token, self.bearer_token_expire = self.get_bearer_token()
 
     def get_prices(self, product_id):
-        prices_request = requests.get(f"{self.base_uri}")
+        self.check_bearer_token()
+
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": TCG_USERAGENT,
+            "Authorization": f"bearer {self.bearer_token}",
+        }
+
+        request = requests.get(
+            f"{self.base_uri}/pricing/product/{product_id}", headers=headers
+        )
+
+        # TODO: update with proper handling
+        if request.status_code != 200:
+            print("Could not get price.")
+            return None
+
+        response = request.json()
+
+        return response["results"]
 
 
 class CardDB:
@@ -522,6 +584,7 @@ class CardDB:
 
 bot_settings = BotSettings()
 scryfall_api = ScryfallAPI()
+tcgplayer_api = TCGPlayerAPI()
 carddb = CardDB()
 bot = commands.Bot(command_prefix=get_prefix)
 
