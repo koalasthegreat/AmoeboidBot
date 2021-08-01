@@ -3,7 +3,6 @@ import datetime
 import os
 import json
 import re
-from typing import Tuple, Optional, Dict, Any
 from io import BytesIO
 
 from image_processing import *
@@ -14,7 +13,6 @@ import sqlite3
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from pydantic import BaseModel
 
 
 load_dotenv()
