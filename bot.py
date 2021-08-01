@@ -2,17 +2,16 @@ from time import sleep
 import datetime
 import os
 import json
-import asyncio
 import re
-from typing import Tuple, Optional, List, Dict, Any
-from io import BytesIO, StringIO
+from typing import Tuple, Optional, Dict, Any
+from io import BytesIO
 
 import requests
 import sqlite3
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 from PIL import Image
 
 
