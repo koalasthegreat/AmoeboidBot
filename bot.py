@@ -1,7 +1,5 @@
 from time import sleep
-import datetime
 import os
-import json
 import re
 from io import BytesIO
 
@@ -9,7 +7,6 @@ from image_processing import *
 from cards import *
 from api import *
 
-import requests
 import sqlite3
 import discord
 from discord.ext import commands
