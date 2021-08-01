@@ -86,6 +86,8 @@ class MagicCard(BaseModel):
     toughness: Optional[str]
     loyalty: Optional[str]
     prices: Optional[Dict[str, Any]]
+    set: Optional[str]
+    set_name: Optional[str]
 
     def format_color_string(cost):
         c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "🟣", "W": "⚪", "C": "⟡"}
@@ -173,6 +175,10 @@ class MagicCard(BaseModel):
 
         if card.power is not None:
             embed.add_field(name="Stats:", value=f"{card.power}/{card.toughness}")
+
+        if card.set is not None and card.set_name is not None:
+            set_string = f"[{card.set.upper()}] {card.set_name}"
+            embed.add_field(name="Set:", value=set_string)
 
         if card.prices is not None:
             price_string = MagicCard.format_prices(card.prices)
