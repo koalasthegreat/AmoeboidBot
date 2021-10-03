@@ -88,6 +88,7 @@ class MagicCard(BaseModel):
     prices: Optional[Dict[str, Any]]
     set: Optional[str]
     set_name: Optional[str]
+    legalities: Optional[Dict[str, str]]
 
     def format_color_string(cost):
         c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "🟣", "W": "⚪", "C": "⟡"}
@@ -124,6 +125,25 @@ class MagicCard(BaseModel):
 
         else:
             return (207, 181, 59)
+
+    def make_legality_string(legalities):
+        def get_entry_value(key):
+            if legalities[key] == "legal":
+                return True
+            return False
+
+        legality_string = ""
+
+        legality_string += f"Standard: {'🟢' if get_entry_value('standard') else '🔴'}\n"
+        legality_string += f"Pioneer: {'🟢' if get_entry_value('pioneer') else '🔴'}\n"
+        legality_string += f"Modern: {'🟢' if get_entry_value('modern') else '🔴'}\n"
+        legality_string += f"Legacy: {'🟢' if get_entry_value('legacy') else '🔴'}\n"
+        legality_string += f"Vintage: {'🟢' if get_entry_value('vintage') else '🔴'}\n"
+        legality_string += f"Commander: {'🟢' if get_entry_value('commander') else '🔴'}\n"
+        legality_string += f"Historic: {'🟢' if get_entry_value('historic') else '🔴'}\n"
+        legality_string += f"Pauper: {'🟢' if get_entry_value('pauper') else '🔴'}"
+
+        return legality_string
 
     def format_prices(prices):
         price_string = ""
@@ -183,6 +203,10 @@ class MagicCard(BaseModel):
         if card.prices is not None:
             price_string = MagicCard.format_prices(card.prices)
             embed.add_field(name="Prices:", value=price_string)
+
+        if card.legalities is not None:
+            legalities = MagicCard.make_legality_string(card.legalities)
+            embed.add_field(name="Legalities:", value=legalities)
 
         return embed
 
@@ -526,7 +550,7 @@ async def _get_art(ctx, set, *card_name):
         else:
             await ctx.send(f"No art found for card with name `{name}`.")
     else:
-        await ctx.send(f"Art for card `{name}` from set `{set_id.upper()}` not found.")
+        await ctx.send(f"Art for card `{card_name}` from set `{set_id.upper()}` not found.")
 
 
 @bot.event
