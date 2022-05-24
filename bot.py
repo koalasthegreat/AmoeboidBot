@@ -9,8 +9,8 @@ from io import BytesIO, StringIO
 
 import requests
 import sqlite3
-import discord
-from discord.ext import commands
+import nextcord
+from nextcord.ext import commands
 from dotenv import load_dotenv
 from pydantic import BaseModel, validator
 from PIL import Image
@@ -27,7 +27,7 @@ REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", default=24))
 def bytes_to_discfile(byte_arr, filename):
     iobytes = BytesIO(byte_arr)
     iobytes.seek(0)
-    return discord.File(iobytes, filename=filename)
+    return nextcord.File(iobytes, filename=filename)
 
 
 def img_to_bytearray(img):
@@ -162,7 +162,7 @@ class MagicCard(BaseModel):
         return price_string
 
     def generate_embed(card):
-        embed = discord.Embed(type="rich")
+        embed = nextcord.Embed(type="rich")
         embed.title = card.name
 
         prefix = ""
@@ -182,7 +182,7 @@ class MagicCard(BaseModel):
             embed.description += f"\n\n[View on Scryfall]({card.scryfall_uri})"
 
         r, g, b = card.color_identity
-        embed.colour = discord.Color.from_rgb(r, g, b)
+        embed.colour = nextcord.Color.from_rgb(r, g, b)
 
         if card.color_string is not None and card.color_string != "":
             embed.add_field(name="Cost:", value=card.color_string)
@@ -478,7 +478,7 @@ async def _get_rulings(ctx, *card_name):
 
         rulings = [ruling for ruling in rulings if ruling.source == "wotc"]
 
-        embed = discord.Embed(type="rich")
+        embed = nextcord.Embed(type="rich")
         embed.title = "Rulings for " + card_name
 
         description = ""
@@ -539,7 +539,7 @@ async def _get_art(ctx, set, *card_name):
             artist_name = card[0][0]["artist"]
             flavor_text = card[0][0].get("flavor_text")
 
-            embed = discord.Embed(type="rich")
+            embed = nextcord.Embed(type="rich")
             embed.title = name + f" ({set_id.upper()})"
             embed.set_image(url=art_uri)
             embed.description = f"*{flavor_text}*" if flavor_text else None
