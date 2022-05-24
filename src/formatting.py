@@ -123,3 +123,4 @@ def generate_embed(card):
         embed.add_field(name="Legalities:", value=legalities)
 
     return embed
+    
