@@ -21,6 +21,7 @@ class MagicCard(BaseModel):
     set_name: Optional[str]
     legalities: Optional[Dict[str, str]]
 
+
 class MagicCardRuling(BaseModel):
     published_at: datetime.date
     source: str

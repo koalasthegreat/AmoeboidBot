@@ -19,6 +19,7 @@ def format_color_string(cost):
 
     return f"**{formatted_string}**" if formatted_string != "" else ""
 
+
 def format_color_identity(color):
     color_map = {
         "R": (221, 46, 68),
@@ -40,6 +41,7 @@ def format_color_identity(color):
     else:
         return (207, 181, 59)
 
+
 def make_legality_string(legalities):
     def get_entry_value(key):
         if legalities[key] == "legal":
@@ -59,6 +61,7 @@ def make_legality_string(legalities):
 
     return legality_string
 
+
 def format_prices(prices):
     price_string = ""
     usd = prices.get("usd")
@@ -74,6 +77,7 @@ def format_prices(prices):
         price_string += "Foil: N/A"
 
     return price_string
+
 
 def generate_embed(card):
     embed = nextcord.Embed(type="rich")
@@ -123,4 +127,3 @@ def generate_embed(card):
         embed.add_field(name="Legalities:", value=legalities)
 
     return embed
-    

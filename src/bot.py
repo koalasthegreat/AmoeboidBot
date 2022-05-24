@@ -12,7 +12,12 @@ from PIL import Image
 from models import MagicCard, MagicCardRuling
 from formatting import format_color_identity, format_color_string, generate_embed
 from api import ScryfallAPI
-from images import bytes_to_discfile, img_to_bytearray, stitch_images_horz, stitch_images_vert
+from images import (
+    bytes_to_discfile,
+    img_to_bytearray,
+    stitch_images_horz,
+    stitch_images_vert,
+)
 
 
 load_dotenv()
@@ -21,6 +26,7 @@ DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
 DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
 DB_NAME = os.getenv("DB_NAME", default="bot.db")
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", default=24))
+
 
 def get_prefix(client, message):
     if not message.guild:
@@ -259,7 +265,9 @@ async def _get_art(ctx, set, *card_name):
         else:
             await ctx.send(f"No art found for card with name `{name}`.")
     else:
-        await ctx.send(f"Art for card `{card_name}` from set `{set_id.upper()}` not found.")
+        await ctx.send(
+            f"Art for card `{card_name}` from set `{set_id.upper()}` not found."
+        )
 
 
 @bot.event
@@ -336,9 +344,7 @@ async def on_message(message):
             color_string = [
                 item for item in color_string if item is not None and item != ""
             ]
-            color_string = [
-                format_color_string(cost) for cost in color_string
-            ]
+            color_string = [format_color_string(cost) for cost in color_string]
             color_string = " // ".join(color_string)
 
             oracle_text = [left.get("oracle_text"), right.get("oracle_text")]
@@ -401,9 +407,7 @@ async def on_message(message):
             color_string = [
                 item for item in color_string if item is not None and item != ""
             ]
-            color_string = [
-                format_color_string(cost) for cost in color_string
-            ]
+            color_string = [format_color_string(cost) for cost in color_string]
             color_string = " // ".join(color_string)
 
             oracle_text = [front_face.get("oracle_text"), back_face.get("oracle_text")]

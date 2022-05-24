@@ -15,11 +15,14 @@ from images import img_to_bytearray, stitch_images_horz
 DB_NAME = os.getenv("DB_NAME", default="bot.db")
 REFRESH_INTERVAL = int(os.getenv("REFRESH_INTERVAL", default=24))
 
+
 class ScryfallAPI:
     def __init__(self):
         self.base_uri = "https://api.scryfall.com"
 
-        self.conn = sqlite3.connect(f"../{DB_NAME}", detect_types=sqlite3.PARSE_DECLTYPES)
+        self.conn = sqlite3.connect(
+            f"../{DB_NAME}", detect_types=sqlite3.PARSE_DECLTYPES
+        )
         self.cursor = self.conn.cursor()
 
         self.cursor.execute(
@@ -115,4 +118,3 @@ class ScryfallAPI:
 
         else:
             return []
-            

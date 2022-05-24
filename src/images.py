@@ -43,4 +43,3 @@ def stitch_images_vert(images, buf_horz=0, buf_vert=0, bgcolor=(255, 255, 255)):
         )
         new_img.paste(paste_img, paste_img_loc)
     return new_img
-    
