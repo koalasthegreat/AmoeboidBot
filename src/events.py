@@ -2,9 +2,9 @@ from io import BytesIO
 import os
 import re
 from nextcord.ext import commands
-from api import ScryfallAPI
 from PIL import Image
 
+from api import scryfall_api
 from botsettings import bot_settings
 from formatting import format_color_identity, format_color_string, generate_embed
 from images import (
@@ -84,7 +84,7 @@ class Events(commands.Cog):
                     await message.channel.send("Invalid formatting of parameters.")
                     return
 
-        raw_cards = ScryfallAPI.get_cards(queries)
+        raw_cards = scryfall_api.get_cards(queries)
         cards = []
 
         for raw_card, image in raw_cards:
