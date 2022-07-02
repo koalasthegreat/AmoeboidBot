@@ -118,3 +118,6 @@ class ScryfallAPI:
 
         else:
             return []
+
+
+scryfall_api = ScryfallAPI()
