@@ -16,7 +16,6 @@ from images import (
 from models import MagicCard
 
 DEFAULT_WRAPPING = os.getenv("DEFAULT_WRAPPING", default="[[*]]")
-DEFAULT_PREFIX = os.getenv("DEFAULT_PREFIX", default="a!")
 
 
 class Events(commands.Cog):
@@ -35,15 +34,9 @@ class Events(commands.Cog):
         wrapping = None
 
         if not message.guild:
-            if DEFAULT_PREFIX in message.content:
-                await self.bot.process_commands(message)
-                return
             wrapping = DEFAULT_WRAPPING
 
         else:
-            if bot_settings.get_prefix(message.guild.id) in message.content:
-                await self.bot.process_commands(message)
-                return
             wrapping = bot_settings.get_wrapping(message.guild.id)
 
         left_split, right_split = wrapping.split("*")

@@ -13,26 +13,6 @@ class Settings(commands.Cog):
         self.bot = bot
 
     @nextcord.slash_command(
-        name="prefix",
-        description="Change/view the bot's prefix",
-        dm_permission=False,
-        default_member_permissions=nextcord.Permissions(administrator=True),
-        guild_ids=[704080805080727583],
-    )
-    async def _change_prefix(
-        self,
-        interaction: nextcord.Interaction,
-        prefix: Optional[str] = nextcord.SlashOption(required=False)
-    ):
-        if prefix is None:
-            prefix = bot_settings.get_prefix(interaction.guild_id)
-            await interaction.send(f"The bot's prefix for this server is currently `{prefix}`.", ephemeral=True)
-
-        else:
-            bot_settings.set_prefix(interaction.guild_id, prefix)
-            await interaction.send(f"Bot prefix changed to `{prefix}`.", ephemeral=True)
-
-    @nextcord.slash_command(
         name="wrapping",
         description="Change/view the bot's wrapping",
         dm_permission=False,
