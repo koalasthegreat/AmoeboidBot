@@ -1,4 +1,5 @@
 import os
+import nextcord
 from nextcord.ext import commands
 from dotenv import load_dotenv
 
@@ -21,7 +22,10 @@ def get_prefix(client, message):
     return bot_settings.get_prefix(message.guild.id)
 
 
-bot = commands.Bot(command_prefix=get_prefix)
+intents = nextcord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix=get_prefix, intents=intents)
 bot.add_cog(Settings(bot))
 bot.add_cog(Rulings(bot))
 bot.add_cog(Artwork(bot))
