@@ -17,7 +17,6 @@ class Cards(commands.Cog):
     @nextcord.slash_command(
         name="card",
         description="Fetches a single card",
-        guild_ids=[704080805080727583],
     )
     async def _get_card(
         self,
@@ -60,7 +59,6 @@ class Settings(commands.Cog):
         description="Change/view the bot's wrapping",
         dm_permission=False,
         default_member_permissions=nextcord.Permissions(administrator=True),
-        guild_ids=[704080805080727583],
     )
     async def _change_wrapping(
         self,
@@ -95,7 +93,6 @@ class Rulings(commands.Cog):
     @nextcord.slash_command(
         name="rulings",
         description="Show rulings for the given card",
-        guild_ids=[704080805080727583],
     )
     async def _get_rulings(self, interaction: nextcord.Interaction, name: str):
         card = scryfall_api.get_cards([{"card_name": name}])
@@ -146,7 +143,6 @@ class Artwork(commands.Cog):
     @nextcord.slash_command(
         name="art",
         description="Look up card artwork",
-        guild_ids=[704080805080727583],
     )
     async def _get_art(self, interaction: nextcord.Interaction, name: str, set: str):
         card = scryfall_api.get_cards(
