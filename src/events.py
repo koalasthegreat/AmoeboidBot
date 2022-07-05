@@ -6,7 +6,7 @@ from PIL import Image
 
 from api import scryfall_api
 from botsettings import bot_settings
-from formatting import format_color_identity, format_color_string, generate_embed
+from formatting import format_color_identity, format_color_string, generate_embed, process_raw_cards
 from images import (
     bytes_to_discfile,
     img_to_bytearray,
@@ -78,141 +78,7 @@ class Events(commands.Cog):
                     return
 
         raw_cards = scryfall_api.get_cards(queries)
-        cards = []
-
-        for raw_card, image in raw_cards:
-            splat = raw_card
-
-            if raw_card["layout"] == "split":
-                left = raw_card["card_faces"][0]
-                right = raw_card["card_faces"][1]
-
-                color_string = [left.get("mana_cost"), right.get("mana_cost")]
-                color_string = [
-                    item for item in color_string if item is not None and item != ""
-                ]
-                color_string = [format_color_string(cost) for cost in color_string]
-                color_string = " // ".join(color_string)
-
-                oracle_text = [left.get("oracle_text"), right.get("oracle_text")]
-                oracle_text = [item for item in oracle_text if item is not None]
-                oracle_text = "\n----\n".join(oracle_text)
-                if oracle_text == "":
-                    oracle_text = None
-
-                flavor_text = [left.get("flavor_text"), right.get("flavor_text")]
-                flavor_text = [item for item in flavor_text if item is not None]
-                flavor_text = "\n----\n".join(flavor_text)
-                if flavor_text == "":
-                    flavor_text = None
-
-                color_identity = format_color_identity(raw_card["color_identity"])
-                normal_image_url = raw_card["image_uris"]["normal"]
-
-                splat.update(
-                    {
-                        "oracle_text": oracle_text,
-                        "flavor_text": flavor_text,
-                        "color_string": color_string,
-                        "normal_image_url": normal_image_url,
-                        "normal_image_bytes": image,
-                        "color_identity": color_identity,
-                    }
-                )
-            elif raw_card["layout"] == "transform":
-                front_face = raw_card["card_faces"][0]
-
-                normal_image_url = front_face["image_uris"]["normal"]
-                oracle_text = front_face.get("oracle_text")
-                flavor_text = front_face.get("flavor_text")
-                color_string = format_color_string(front_face.get("mana_cost"))
-                color_identity = format_color_identity(raw_card["color_identity"])
-                power = front_face.get("power")
-                toughness = front_face.get("toughness")
-                loyalty = front_face.get("loyalty")
-
-                splat.update(
-                    {
-                        "normal_image_url": normal_image_url,
-                        "normal_image_bytes": image,
-                        "oracle_text": oracle_text,
-                        "flavor_text": flavor_text,
-                        "color_string": color_string,
-                        "power": power,
-                        "toughness": toughness,
-                        "loyalty": loyalty,
-                        "color_identity": color_identity,
-                    }
-                )
-            elif raw_card["layout"] == "modal_dfc":
-                front_face = raw_card["card_faces"][0]
-                back_face = raw_card["card_faces"][1]
-
-                normal_image_url = front_face["image_uris"]["normal"]
-
-                color_string = [front_face.get("mana_cost"), back_face.get("mana_cost")]
-                color_string = [
-                    item for item in color_string if item is not None and item != ""
-                ]
-                color_string = [format_color_string(cost) for cost in color_string]
-                color_string = " // ".join(color_string)
-
-                oracle_text = [
-                    front_face.get("oracle_text"),
-                    back_face.get("oracle_text"),
-                ]
-                oracle_text = [item for item in oracle_text if item is not None]
-                oracle_text = "\n----\n".join(oracle_text)
-                if oracle_text == "":
-                    oracle_text = None
-
-                flavor_text = [
-                    front_face.get("flavor_text"),
-                    back_face.get("flavor_text"),
-                ]
-                flavor_text = [item for item in flavor_text if item is not None]
-                flavor_text = "\n----\n".join(flavor_text)
-                if flavor_text == "":
-                    flavor_text = None
-
-                color_identity = format_color_identity(raw_card["color_identity"])
-
-                splat.update(
-                    {
-                        "normal_image_url": normal_image_url,
-                        "normal_image_bytes": image,
-                        "oracle_text": oracle_text,
-                        "flavor_text": flavor_text,
-                        "color_string": color_string,
-                        "color_identity": color_identity,
-                    }
-                )
-
-            else:
-                normal_image_url = raw_card["image_uris"]["normal"]
-                color_string = format_color_string(raw_card.get("mana_cost"))
-                color_identity = format_color_identity(raw_card["color_identity"])
-
-                splat.update(
-                    {
-                        "normal_image_url": normal_image_url,
-                        "normal_image_bytes": image,
-                        "color_identity": color_identity,
-                        "color_string": color_string,
-                    }
-                )
-
-            prices = raw_card["prices"]
-
-            splat.update(
-                {
-                    "prices": prices,
-                }
-            )
-
-            card = MagicCard(**splat)
-
-            cards.append(card)
+        cards = process_raw_cards(raw_cards)
 
         if len(cards) == 0:
             await message.channel.send("Could not find any cards.")

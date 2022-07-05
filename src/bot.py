@@ -4,7 +4,7 @@ from nextcord.ext import commands
 from dotenv import load_dotenv
 
 from events import Events
-from botcommands import Artwork, Rulings, Settings
+from botcommands import Artwork, Cards, Rulings, Settings
 
 
 load_dotenv()
@@ -18,6 +18,7 @@ intents = nextcord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(intents=intents)
+bot.add_cog(Cards(bot))
 bot.add_cog(Settings(bot))
 bot.add_cog(Rulings(bot))
 bot.add_cog(Artwork(bot))
