@@ -4,7 +4,7 @@ from nextcord.ext import commands
 from dotenv import load_dotenv
 
 from events import Events
-from botcommands import Artwork, Cards, Rulings, Settings
+from commands import Artwork, Cards, Rulings, Settings
 
 
 load_dotenv()

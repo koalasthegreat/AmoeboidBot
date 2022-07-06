@@ -5,7 +5,7 @@ from nextcord.ext import commands
 from PIL import Image
 
 from api import scryfall_api
-from botsettings import bot_settings
+from settings import bot_settings
 from formatting import format_color_identity, format_color_string, generate_embed, process_raw_cards
 from images import (
     bytes_to_discfile,

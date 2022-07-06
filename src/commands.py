@@ -4,7 +4,7 @@ from typing import Optional
 import nextcord
 from nextcord.ext import commands
 
-from botsettings import bot_settings
+from settings import bot_settings
 from api import scryfall_api
 from formatting import generate_embed, process_raw_cards
 from images import bytes_to_discfile
