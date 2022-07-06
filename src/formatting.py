@@ -43,23 +43,38 @@ def format_color_identity(color):
 
 
 def make_legality_string(legalities):
-    def get_entry_value(key):
+    def get_legality_mark(key):
         if legalities[key] == "legal":
-            return True
-        return False
+            return '🟢'
+        elif legalities[key] == "not_legal":
+            return '🔴'
+        elif legalities[key] == "restricted":
+            return '🟡'
+        elif legalities[key] == "banned":
+            return '❌'
+        return '❓'
 
-    legality_string = ""
+    def batch_legalities(formats):
+        legality_string = ""
 
-    legality_string += f"Standard: {'🟢' if get_entry_value('standard') else '🔴'}\n"
-    legality_string += f"Pioneer: {'🟢' if get_entry_value('pioneer') else '🔴'}\n"
-    legality_string += f"Modern: {'🟢' if get_entry_value('modern') else '🔴'}\n"
-    legality_string += f"Legacy: {'🟢' if get_entry_value('legacy') else '🔴'}\n"
-    legality_string += f"Vintage: {'🟢' if get_entry_value('vintage') else '🔴'}\n"
-    legality_string += f"Commander: {'🟢' if get_entry_value('commander') else '🔴'}\n"
-    legality_string += f"Historic: {'🟢' if get_entry_value('historic') else '🔴'}\n"
-    legality_string += f"Pauper: {'🟢' if get_entry_value('pauper') else '🔴'}"
+        for format in formats:
+            legality_string += f"{format}: {get_legality_mark(format.lower())}\n"
 
-    return legality_string
+        return legality_string
+
+
+    formats = [
+        "Standard",
+        "Pioneer",
+        "Modern",
+        "Legacy",
+        "Vintage",
+        "Commander",
+        "Historic",
+        "Pauper"
+    ]
+
+    return batch_legalities(formats)
 
 
 def format_prices(prices):
