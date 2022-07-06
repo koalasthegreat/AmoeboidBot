@@ -24,6 +24,8 @@ class Cards(commands.Cog):
         name: str,
         set: Optional[str] = nextcord.SlashOption(required=False)
     ):
+        await interaction.response.defer()
+
         raw_cards = scryfall_api.get_cards(
             [
                 {
@@ -65,6 +67,8 @@ class Settings(commands.Cog):
         interaction: nextcord.Interaction,
         wrapping: Optional[str] = nextcord.SlashOption(required=False)
     ):
+        await interaction.response.defer()
+
         if wrapping is None:
             wrapping = bot_settings.get_wrapping(interaction.guild_id)
             await interaction.send(
@@ -95,6 +99,8 @@ class Rulings(commands.Cog):
         description="Show rulings for the given card",
     )
     async def _get_rulings(self, interaction: nextcord.Interaction, name: str):
+        await interaction.response.defer()
+
         card = scryfall_api.get_cards([{"card_name": name}])
         sleep(0.25)  # TODO: better ratelimiting
 
@@ -145,6 +151,8 @@ class Artwork(commands.Cog):
         description="Look up card artwork",
     )
     async def _get_art(self, interaction: nextcord.Interaction, name: str, set: Optional[str] = nextcord.SlashOption(required=False)):
+        await interaction.response.defer()
+
         card = scryfall_api.get_cards(
             [
                 {
