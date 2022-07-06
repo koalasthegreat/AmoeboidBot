@@ -144,7 +144,7 @@ class Artwork(commands.Cog):
         name="art",
         description="Look up card artwork",
     )
-    async def _get_art(self, interaction: nextcord.Interaction, name: str, set: str):
+    async def _get_art(self, interaction: nextcord.Interaction, name: str, set: Optional[str] = nextcord.SlashOption(required=False)):
         card = scryfall_api.get_cards(
             [
                 {
@@ -165,7 +165,7 @@ class Artwork(commands.Cog):
                 flavor_text = card[0][0].get("flavor_text")
 
                 embed = nextcord.Embed(type="rich")
-                embed.title = name + f" ({set.upper()})"
+                embed.title = name + f" ({set.upper()})" if set else name
                 embed.set_image(url=art_uri)
                 embed.description = f"*{flavor_text}*" if flavor_text else None
                 embed.set_footer(text=f"{artist_name} — ™ and © Wizards of the Coast")
@@ -173,8 +173,9 @@ class Artwork(commands.Cog):
                 await interaction.send(embed=embed)
 
             else:
-                await interaction.send(f"No art found for card with name `{name}`.")
+                await interaction.send(f"No art image found for card with name `{name}`.")
         else:
             await interaction.send(
-                f"Art for card `{name}` from set `{set.upper()}` not found."
+                f"No card with name `{name}` from set `{set.upper()}` found." if set else
+                f"No card with name `{name} found.`"
             )
