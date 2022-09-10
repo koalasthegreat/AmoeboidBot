@@ -1,6 +1,6 @@
 from asyncio import tasks
 from random import choice
-from discord import Game
+from nextcord import Game
 from nextcord.ext import commands, tasks
 
 class Activity(commands.Cog):
