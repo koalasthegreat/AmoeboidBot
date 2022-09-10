@@ -4,6 +4,7 @@ from nextcord.ext import commands
 from dotenv import load_dotenv
 
 from events import Events
+from activity import Activity
 from commands import Artwork, Cards, Rulings, Settings
 
 
@@ -23,5 +24,6 @@ bot.add_cog(Settings(bot))
 bot.add_cog(Rulings(bot))
 bot.add_cog(Artwork(bot))
 bot.add_cog(Events(bot))
+bot.add_cog(Activity(bot))
 
 bot.run(TOKEN)
