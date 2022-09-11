@@ -6,7 +6,7 @@ from PIL import Image
 
 from api import scryfall_api
 from settings import bot_settings
-from formatting import format_color_identity, format_color_string, generate_embed, process_raw_cards
+from formatting import format_color_identity, format_custom_emojis, generate_embed, process_raw_cards
 from images import (
     bytes_to_discfile,
     img_to_bytearray,
