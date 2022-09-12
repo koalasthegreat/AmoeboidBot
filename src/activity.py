@@ -3,6 +3,7 @@ from random import choice
 from nextcord import Game
 from nextcord.ext import commands, tasks
 
+
 class Activity(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

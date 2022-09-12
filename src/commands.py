@@ -22,7 +22,7 @@ class Cards(commands.Cog):
         self,
         interaction: nextcord.Interaction,
         name: str,
-        set: Optional[str] = nextcord.SlashOption(required=False)
+        set: Optional[str] = nextcord.SlashOption(required=False),
     ):
         await interaction.response.defer()
 
@@ -31,8 +31,10 @@ class Cards(commands.Cog):
                 {
                     "card_name": name,
                     "params": [
-                        { "set": set, }
-                    ]
+                        {
+                            "set": set,
+                        }
+                    ],
                 }
             ]
         )
@@ -52,6 +54,7 @@ class Cards(commands.Cog):
         else:
             await interaction.send(f"No card found named `{name}` with those details")
 
+
 class Settings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -65,7 +68,7 @@ class Settings(commands.Cog):
     async def _change_wrapping(
         self,
         interaction: nextcord.Interaction,
-        wrapping: Optional[str] = nextcord.SlashOption(required=False)
+        wrapping: Optional[str] = nextcord.SlashOption(required=False),
     ):
         await interaction.response.defer()
 
@@ -73,7 +76,7 @@ class Settings(commands.Cog):
             wrapping = bot_settings.get_wrapping(interaction.guild_id)
             await interaction.send(
                 f"The bot's wrapping for this server is currently `{wrapping}`.",
-                ephemeral=True
+                ephemeral=True,
             )
 
         else:
@@ -81,12 +84,14 @@ class Settings(commands.Cog):
 
             if re.match(regex, wrapping):
                 bot_settings.set_wrapping(interaction.guild_id, wrapping)
-                await interaction.send(f"Bot wrapping changed to `{wrapping}`.", ephemeral=True)
+                await interaction.send(
+                    f"Bot wrapping changed to `{wrapping}`.", ephemeral=True
+                )
 
             else:
                 await interaction.send(
                     "Bot wrapping is not valid. Wrap a \* in characters, like this: `[[*]]`",
-                    ephemeral=True
+                    ephemeral=True,
                 )
 
 
@@ -150,7 +155,12 @@ class Artwork(commands.Cog):
         name="art",
         description="Look up card artwork",
     )
-    async def _get_art(self, interaction: nextcord.Interaction, name: str, set: Optional[str] = nextcord.SlashOption(required=False)):
+    async def _get_art(
+        self,
+        interaction: nextcord.Interaction,
+        name: str,
+        set: Optional[str] = nextcord.SlashOption(required=False),
+    ):
         await interaction.response.defer()
 
         card = scryfall_api.get_cards(
@@ -158,8 +168,10 @@ class Artwork(commands.Cog):
                 {
                     "card_name": name,
                     "params": [
-                        { "set": set, }
-                    ]
+                        {
+                            "set": set,
+                        }
+                    ],
                 }
             ]
         )
@@ -181,9 +193,12 @@ class Artwork(commands.Cog):
                 await interaction.send(embed=embed)
 
             else:
-                await interaction.send(f"No art image found for card with name `{name}`.")
+                await interaction.send(
+                    f"No art image found for card with name `{name}`."
+                )
         else:
             await interaction.send(
-                f"No card with name `{name}` from set `{set.upper()}` found." if set else
-                f"No card with name `{name} found.`"
+                f"No card with name `{name}` from set `{set.upper()}` found."
+                if set
+                else f"No card with name `{name} found.`"
             )

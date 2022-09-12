@@ -57,7 +57,9 @@ def format_custom_emojis(text):
         "{Q}": "manaq:1018637918300024965",
     }
 
-    pattern = re.compile(r'(?<!\w)(' + '|'.join(re.escape(key) for key in c_map.keys()) + r')(?!\w)')
+    pattern = re.compile(
+        r"(?<!\w)(" + "|".join(re.escape(key) for key in c_map.keys()) + r")(?!\w)"
+    )
     return pattern.sub(lambda x: f"<:{c_map[x.group()]}>", text)
 
 
@@ -86,14 +88,14 @@ def format_color_identity(color):
 def make_legality_string(legalities):
     def get_legality_mark(key):
         if legalities[key] == "legal":
-            return '🟢'
+            return "🟢"
         elif legalities[key] == "not_legal":
-            return '🔴'
+            return "🔴"
         elif legalities[key] == "restricted":
-            return '🟡'
+            return "🟡"
         elif legalities[key] == "banned":
-            return '❌'
-        return '❓'
+            return "❌"
+        return "❓"
 
     def batch_legalities(formats):
         legality_string = ""
@@ -103,7 +105,6 @@ def make_legality_string(legalities):
 
         return legality_string
 
-
     formats = [
         "Standard",
         "Pioneer",
@@ -112,7 +113,7 @@ def make_legality_string(legalities):
         "Vintage",
         "Commander",
         "Historic",
-        "Pauper"
+        "Pauper",
     ]
 
     return batch_legalities(formats)
@@ -185,6 +186,7 @@ def generate_embed(card):
         embed.add_field(name="Legalities:", value=legalities)
 
     return embed
+
 
 def process_raw_cards(raw_cards):
     cards = []
@@ -322,5 +324,5 @@ def process_raw_cards(raw_cards):
         card = MagicCard(**splat)
 
         cards.append(card)
-    
+
     return cards
