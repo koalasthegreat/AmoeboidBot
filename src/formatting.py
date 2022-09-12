@@ -4,20 +4,63 @@ import nextcord
 from models import MagicCard
 
 
-def format_color_string(cost):
-    c_map = {"R": "🔴", "U": "🔵", "G": "🟢", "B": "🟣", "W": "⚪", "C": "⟡"}
-    curly_brace_regex = r"\{(.*?)\}"
+def format_custom_emojis(text):
+    c_map = {
+        # Basic Symbols
+        "{W}": "manaw:1018637347941797998",
+        "{U}": "manau:1018637747352772698",
+        "{B}": "manab:1018638324627410974",
+        "{R}": "manar:1018637919768023120",
+        "{G}": "manag:1018637911563968592",
+        "{C}": "manac:1018637909013827604",
+        # Numbers
+        "{0}": "mana0:1018638717465935882",
+        "{1}": "mana1:1018638718141214841",
+        "{2}": "mana2:1018638719676338226",
+        "{3}": "mana3:1018638315316072518",
+        "{4}": "mana4:1018638316410777720",
+        "{5}": "mana5:1018638317736181921",
+        "{6}": "mana6:1018638318772174898",
+        "{7}": "mana7:1018638319883653231",
+        "{8}": "mana8:1018638320969982044",
+        "{9}": "mana9:1018638321993383958",
+        "{10}": "mana10:1018638323507544234",
+        # Phyrexian Mana
+        "{W/P}": "manawp:1018637344024313938",
+        "{U/P}": "manaup:1018637352823955559",
+        "{B/P}": "manabp:1018638328066752666",
+        "{R/P}": "manarp:1018637741602377758",
+        "{G/P}": "managp:1018637912084062350",
+        # Hybrid Generic/Colored
+        "{2/W}": "mana2w:1018664005713285131",
+        "{2/U}": "mana2u:1018664004383674420",
+        "{2/B}": "mana2b:1018638720771035158",
+        "{2/R}": "mana2r:1018638723467980942",
+        "{2/G}": "mana2g:1018638722125803591",
+        # Allied Colors
+        "{W/U}": "manawu:1018637342707302571",
+        "{U/B}": "manaub:1018637748468461578",
+        "{B/R}": "manabr:1018637906887315536",
+        "{R/G}": "manarg:1018637738662182933",
+        "{G/W}": "managw:1018637915586306058",
+        # Enemy Colors
+        "{W/B}": "manawb:1018637346796752926",
+        "{B/G}": "manabg:1018638325575323709",
+        "{G/U}": "managu:1018637913321377822",
+        "{U/R}": "manaur:1018637350953295944",
+        "{R/W}": "manarw:1018637742797750292",
+        # Other Symbols/Mana
+        "{S}": "manas:1018637745058488364",
+        "{X}": "manax:1018637749173100717",
+        "{E}": "manae:1018637910041440317",
+        "{T}": "manat:1018637745951887453",
+        "{Q}": "manaq:1018637918300024965",
+    }
 
-    formatted_string = ""
-    arr = re.findall(curly_brace_regex, cost)
-
-    for cost_symbol in arr:
-        if cost_symbol in c_map:
-            formatted_string += c_map[cost_symbol]
-        else:
-            formatted_string += f"({cost_symbol})"
-
-    return f"**{formatted_string}**" if formatted_string != "" else ""
+    pattern = re.compile(
+        r"(?<!\w)(" + "|".join(re.escape(key) for key in c_map.keys()) + r")(?!\w)"
+    )
+    return pattern.sub(lambda x: f"<:{c_map[x.group()]}>", text)
 
 
 def format_color_identity(color):
@@ -45,14 +88,14 @@ def format_color_identity(color):
 def make_legality_string(legalities):
     def get_legality_mark(key):
         if legalities[key] == "legal":
-            return '🟢'
+            return "🟢"
         elif legalities[key] == "not_legal":
-            return '🔴'
+            return "🔴"
         elif legalities[key] == "restricted":
-            return '🟡'
+            return "🟡"
         elif legalities[key] == "banned":
-            return '❌'
-        return '❓'
+            return "❌"
+        return "❓"
 
     def batch_legalities(formats):
         legality_string = ""
@@ -62,7 +105,6 @@ def make_legality_string(legalities):
 
         return legality_string
 
-
     formats = [
         "Standard",
         "Pioneer",
@@ -71,7 +113,7 @@ def make_legality_string(legalities):
         "Vintage",
         "Commander",
         "Historic",
-        "Pauper"
+        "Pauper",
     ]
 
     return batch_legalities(formats)
@@ -111,6 +153,8 @@ def generate_embed(card):
     if card.flavor_text is not None:
         embed.description += f"{prefix}*{card.flavor_text}*"
 
+    embed.description = format_custom_emojis(embed.description)
+
     if embed.description != "":
         embed.description += f"\n\n[View on Scryfall]({card.scryfall_uri})"
 
@@ -143,6 +187,7 @@ def generate_embed(card):
 
     return embed
 
+
 def process_raw_cards(raw_cards):
     cards = []
 
@@ -157,7 +202,7 @@ def process_raw_cards(raw_cards):
             color_string = [
                 item for item in color_string if item is not None and item != ""
             ]
-            color_string = [format_color_string(cost) for cost in color_string]
+            color_string = [format_custom_emojis(cost) for cost in color_string]
             color_string = " // ".join(color_string)
 
             oracle_text = [left.get("oracle_text"), right.get("oracle_text")]
@@ -191,7 +236,7 @@ def process_raw_cards(raw_cards):
             normal_image_url = front_face["image_uris"]["normal"]
             oracle_text = front_face.get("oracle_text")
             flavor_text = front_face.get("flavor_text")
-            color_string = format_color_string(front_face.get("mana_cost"))
+            color_string = format_custom_emojis(front_face.get("mana_cost"))
             color_identity = format_color_identity(raw_card["color_identity"])
             power = front_face.get("power")
             toughness = front_face.get("toughness")
@@ -220,7 +265,7 @@ def process_raw_cards(raw_cards):
             color_string = [
                 item for item in color_string if item is not None and item != ""
             ]
-            color_string = [format_color_string(cost) for cost in color_string]
+            color_string = [format_custom_emojis(cost) for cost in color_string]
             color_string = " // ".join(color_string)
 
             oracle_text = [
@@ -256,7 +301,7 @@ def process_raw_cards(raw_cards):
 
         else:
             normal_image_url = raw_card["image_uris"]["normal"]
-            color_string = format_color_string(raw_card.get("mana_cost"))
+            color_string = format_custom_emojis(raw_card.get("mana_cost"))
             color_identity = format_color_identity(raw_card["color_identity"])
 
             splat.update(
@@ -279,5 +324,5 @@ def process_raw_cards(raw_cards):
         card = MagicCard(**splat)
 
         cards.append(card)
-    
+
     return cards
