@@ -54,6 +54,16 @@ class Cards(commands.Cog):
         else:
             await interaction.send(f"No card found named `{name}` with those details")
 
+    @_get_card.on_autocomplete("name")
+    async def _card_name_autocomplete(self, interaction, name):
+        if name and len(name) > 2:
+            autocomplete = scryfall_api.get_autocomplete(name)
+
+            await interaction.response.send_autocomplete(autocomplete.get("data"))
+            return
+        else:
+            await interaction.response.send_autocomplete([])
+
 
 class Settings(commands.Cog):
     def __init__(self, bot):
@@ -148,6 +158,16 @@ class Rulings(commands.Cog):
         else:
             await interaction.send(f"Card with name `{name}` not found.")
 
+    @_get_rulings.on_autocomplete("name")
+    async def _card_name_autocomplete(self, interaction, name):
+        if name and len(name) > 2:
+            autocomplete = scryfall_api.get_autocomplete(name)
+
+            await interaction.response.send_autocomplete(autocomplete.get("data"))
+            return
+        else:
+            await interaction.response.send_autocomplete([])
+
 
 class Artwork(commands.Cog):
     def __init__(self, bot):
@@ -206,3 +226,13 @@ class Artwork(commands.Cog):
                 if set
                 else f"No card with name `{name} found.`"
             )
+
+    @_get_art.on_autocomplete("name")
+    async def _card_name_autocomplete(self, interaction, name):
+        if name and len(name) > 2:
+            autocomplete = scryfall_api.get_autocomplete(name)
+
+            await interaction.response.send_autocomplete(autocomplete.get("data"))
+            return
+        else:
+            await interaction.response.send_autocomplete([])

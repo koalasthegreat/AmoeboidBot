@@ -119,5 +119,14 @@ class ScryfallAPI:
         else:
             return []
 
+    def get_autocomplete(self, partial_name):
+        params = {"q": partial_name}
+
+        autocomplete_request = requests.get(
+            self.base_uri + "/cards/autocomplete", params
+        )
+
+        return autocomplete_request.json()
+
 
 scryfall_api = ScryfallAPI()
