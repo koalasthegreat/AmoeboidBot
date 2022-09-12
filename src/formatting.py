@@ -140,6 +140,8 @@ def generate_embed(card):
     embed = nextcord.Embed(type="rich")
     embed.title = card.name
 
+    embed.url = card.scryfall_uri
+
     prefix = ""
 
     embed.description = ""
@@ -154,9 +156,6 @@ def generate_embed(card):
         embed.description += f"{prefix}*{card.flavor_text}*"
 
     embed.description = format_custom_emojis(embed.description)
-
-    if embed.description != "":
-        embed.description += f"\n\n[View on Scryfall]({card.scryfall_uri})"
 
     r, g, b = card.color_identity
     embed.colour = nextcord.Color.from_rgb(r, g, b)

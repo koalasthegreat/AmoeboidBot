@@ -111,6 +111,7 @@ class Rulings(commands.Cog):
 
         if len(card) > 0 and card[0][0].get("rulings_uri"):
             name = card[0][0]["name"]
+            scryfall_uri = card[0][0].get("scryfall_uri")
             rulings = scryfall_api.get_rulings(card[0][0]["rulings_uri"])
 
             if len(rulings) == 0:
@@ -121,6 +122,7 @@ class Rulings(commands.Cog):
 
             embed = nextcord.Embed(type="rich")
             embed.title = "Rulings for " + name
+            embed.url = scryfall_uri
 
             description = ""
 
@@ -183,9 +185,11 @@ class Artwork(commands.Cog):
                 art_uri = card[0][0]["image_uris"]["art_crop"]
                 artist_name = card[0][0]["artist"]
                 flavor_text = card[0][0].get("flavor_text")
+                scryfall_uri = card[0][0].get("scryfall_uri")
 
                 embed = nextcord.Embed(type="rich")
                 embed.title = name + f" ({set.upper()})" if set else name
+                embed.url = scryfall_uri
                 embed.set_image(url=art_uri)
                 embed.description = f"*{flavor_text}*" if flavor_text else None
                 embed.set_footer(text=f"{artist_name} — ™ and © Wizards of the Coast")
