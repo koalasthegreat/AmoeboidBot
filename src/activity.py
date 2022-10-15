@@ -35,7 +35,7 @@ class Activity(commands.Cog):
     def cog_unload(self):
         self.activity.cancel()
 
-    @tasks.loop(minutes=5.0)
+    @tasks.loop(minutes=20.0)
     async def activity(self):
         activity = Game(name=choice(self.activities))
 
